@@ -22,7 +22,7 @@ async function bootstrap() {
   // Enable CORS for the frontend. Allow explicit origins from FRONTEND_URL
   // or fall back to localhost dev and the known Railway frontend host.
   const frontendEnv = process.env.FRONTEND_URL || '';
-  const fallbackOrigins = [DEFAULT_FRONTEND_ORIGIN, 'https://caring-reverence-production-e548.up.railway.app'];
+  const fallbackOrigins = [DEFAULT_FRONTEND_ORIGIN, 'https://vigilant-cooperation-production-b1dd.up.railway.app'];
 
   const allowedOrigins = frontendEnv
     ? frontendEnv

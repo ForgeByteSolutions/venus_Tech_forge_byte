@@ -247,6 +247,7 @@ export class NavbarComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadCurrentUserName() {
+    if (this.currentUserName) return;
     
     const currentUserStr = localStorage.getItem('currentUser');
     let uid: number | null = null;

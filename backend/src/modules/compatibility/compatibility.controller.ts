@@ -33,18 +33,29 @@ const areaToModel: Record<string, string> = {
   entities: 'entity',
   entity: 'entity',
   catstatus: 'categoryStatus',
+  categorystatus: 'categoryStatus',
   etoe: 'entityToEntity',
+  entitytoentity: 'entityToEntity',
   etogen: 'entityToGeneratorAsset',
+  entitytogeneratorasset: 'entityToGeneratorAsset',
   etoppas: 'entityToPpa',
+  etoppa: 'entityToPpa',
+  entitytoppa: 'entityToPpa',
   etova: 'entityToVerticalAsset',
+  entitytoverticalasset: 'entityToVerticalAsset',
   imss: 'indicativeMarketScreenStudy',
+  indicativemss: 'indicativeMarketScreenStudy',
   ipss: 'indicativePowerSupplyStudy',
+  indicativepss: 'indicativePowerSupplyStudy',
   mbrauth: 'mbrAuthorization',
+  mbrauthorization: 'mbrAuthorization',
   mitigation: 'mitigation',
   mitigations: 'mitigation',
   selflimit: 'selfLimitation',
   selflimitation: 'selfLimitation',
   or: 'operatingReserve',
+  operatingreserve: 'operatingReserve',
+  operatingreserves: 'operatingReserve',
   filing: 'filing',
   filings: 'filing',
   invoice: 'invoice',
@@ -81,21 +92,15 @@ export class CompatibilityController {
     if (area === 'company') return this.handleCompanyGet(action, params);
     if (area === 'user') return this.handleUserGet(action, params);
     if (area === 'filing' || area === 'filings') return this.handleFilingGet(action, params);
-    if (area === 'invoice') return this.handleInvoiceGet(action, params);
-    if (area === 'assets' || area === 'asset') return this.handleGenericGet('asset', action, params, query);
-    if (area === 'entities' || area === 'entity') return this.handleGenericGet('entity', action, params, query);
-    if (area === 'catstatus') return this.handleGenericGet('categoryStatus', action, params, query);
-    if (area === 'etoe') return this.handleGenericGet('entityToEntity', action, params, query);
-    if (area === 'etogen') return this.handleGenericGet('entityToGeneratorAsset', action, params, query);
-    if (area === 'etoppas') return this.handleGenericGet('entityToPpa', action, params, query);
-    if (area === 'etova') return this.handleGenericGet('entityToVerticalAsset', action, params, query);
-    if (area === 'imss') return this.handleImssGet(action, params);
-    if (area === 'ipss') return this.handleIpssGet(action, params);
-    if (area === 'mbrauth') return this.handleGenericGet('mbrAuthorization', action, params, query);
-    if (area === 'mitigation' || area === 'mitigations') return this.handleGenericGet('mitigation', action, params, query);
-    if (area === 'selflimit' || area === 'selflimitation') return this.handleGenericGet('selfLimitation', action, params, query);
-    if (area === 'or') return this.handleGenericGet('operatingReserve', action, params, query);
+    if (area === 'invoice' || area === 'invoices') return this.handleInvoiceGet(action, params);
+    if (area === 'imss' || area === 'indicativemss') return this.handleImssGet(action, params);
+    if (area === 'ipss' || area === 'indicativepss') return this.handleIpssGet(action, params);
     if (area === 'fercapi') return this.handleFercApiGet(action, params);
+
+    const modelName = areaToModel[area];
+    if (modelName && modelName !== 'commonLookup') {
+      return this.handleGenericGet(modelName, action, params, query);
+    }
 
     if (this.isXmlAction(action)) return '<root></root>';
     if (this.isListAction(action)) return [];
@@ -123,21 +128,15 @@ export class CompatibilityController {
     if (area === 'account') return this.handleAccountPost(action, body, params, query);
     if (area === 'company') return this.handleCompanyPost(action, body, params, query);
     if (area === 'filing' || area === 'filings') return this.handleFilingPost(action, body, params, query);
-    if (area === 'invoice') return this.handleInvoicePost(action, body, params, query);
-    if (area === 'assets' || area === 'asset') return this.handleGenericPost('asset', action, body, params, query);
-    if (area === 'entities' || area === 'entity') return this.handleGenericPost('entity', action, body, params, query);
-    if (area === 'catstatus') return this.handleGenericPost('categoryStatus', action, body, params, query);
-    if (area === 'etoe') return this.handleGenericPost('entityToEntity', action, body, params, query);
-    if (area === 'etogen') return this.handleGenericPost('entityToGeneratorAsset', action, body, params, query);
-    if (area === 'etoppas') return this.handleGenericPost('entityToPpa', action, body, params, query);
-    if (area === 'etova') return this.handleGenericPost('entityToVerticalAsset', action, body, params, query);
-    if (area === 'imss') return this.handleImssPost(action, body, params, query);
-    if (area === 'ipss') return this.handleIpssPost(action, body, params, query);
-    if (area === 'mbrauth') return this.handleGenericPost('mbrAuthorization', action, body, params, query);
-    if (area === 'mitigation' || area === 'mitigations') return this.handleGenericPost('mitigation', action, body, params, query);
-    if (area === 'selflimit' || area === 'selflimitation') return this.handleGenericPost('selfLimitation', action, body, params, query);
-    if (area === 'or') return this.handleGenericPost('operatingReserve', action, body, params, query);
+    if (area === 'invoice' || area === 'invoices') return this.handleInvoicePost(action, body, params, query);
+    if (area === 'imss' || area === 'indicativemss') return this.handleImssPost(action, body, params, query);
+    if (area === 'ipss' || area === 'indicativepss') return this.handleIpssPost(action, body, params, query);
     if (area === 'fercapi') return this.handleFercApiPost(action, body, params, query);
+
+    const modelName = areaToModel[area];
+    if (modelName && modelName !== 'commonLookup') {
+      return this.handleGenericPost(modelName, action, body, params, query);
+    }
 
     return {
       success: false,
@@ -164,21 +163,15 @@ export class CompatibilityController {
     if (area === 'account') return this.handleAccountPost(action, body, params, query);
     if (area === 'company') return this.handleCompanyPost(action, body, params, query);
     if (area === 'filing' || area === 'filings') return this.handleFilingPost(action, body, params, query);
-    if (area === 'invoice') return this.handleInvoicePost(action, body, params, query);
-    if (area === 'assets' || area === 'asset') return this.handleGenericPost('asset', action, body, params, query);
-    if (area === 'entities' || area === 'entity') return this.handleGenericPost('entity', action, body, params, query);
-    if (area === 'catstatus') return this.handleGenericPost('categoryStatus', action, body, params, query);
-    if (area === 'etoe') return this.handleGenericPost('entityToEntity', action, body, params, query);
-    if (area === 'etogen') return this.handleGenericPost('entityToGeneratorAsset', action, body, params, query);
-    if (area === 'etoppas') return this.handleGenericPost('entityToPpa', action, body, params, query);
-    if (area === 'etova') return this.handleGenericPost('entityToVerticalAsset', action, body, params, query);
-    if (area === 'imss') return this.handleImssPost(action, body, params, query);
-    if (area === 'ipss') return this.handleIpssPost(action, body, params, query);
-    if (area === 'mbrauth') return this.handleGenericPost('mbrAuthorization', action, body, params, query);
-    if (area === 'mitigation' || area === 'mitigations') return this.handleGenericPost('mitigation', action, body, params, query);
-    if (area === 'selflimit' || area === 'selflimitation') return this.handleGenericPost('selfLimitation', action, body, params, query);
-    if (area === 'or') return this.handleGenericPost('operatingReserve', action, body, params, query);
+    if (area === 'invoice' || area === 'invoices') return this.handleInvoicePost(action, body, params, query);
+    if (area === 'imss' || area === 'indicativemss') return this.handleImssPost(action, body, params, query);
+    if (area === 'ipss' || area === 'indicativepss') return this.handleIpssPost(action, body, params, query);
     if (area === 'fercapi') return this.handleFercApiPost(action, body, params, query);
+
+    const modelName = areaToModel[area];
+    if (modelName && modelName !== 'commonLookup') {
+      return this.handleGenericPost(modelName, action, body, params, query);
+    }
 
     return {
       success: false,
@@ -192,37 +185,62 @@ export class CompatibilityController {
   async delete(@Param() params: AnyRecord) {
     const area = this.normalize(params.area);
     const action = this.normalize(params.action);
+    const idVal = this.numberValue(params.p1);
 
     if (area === 'user' && action === 'deletebyid') {
       await this.prisma.user.updateMany({
-        where: { uid: this.numberValue(params.p1) },
+        where: { uid: idVal },
         data: { isActive: false },
       });
+      return {
+        success: true,
+        message: 'User deleted successfully',
+        resultId: idVal,
+        ResultId: idVal,
+        uid: idVal,
+      };
     }
 
     if (area === 'company' && action === 'admindeletecompany') {
       await this.prisma.company.updateMany({
-        where: { cid: this.numberValue(params.p1) },
+        where: { cid: idVal },
         data: { isActive: false },
       });
+      return {
+        success: true,
+        message: 'Company deleted successfully',
+        resultId: idVal,
+        ResultId: idVal,
+        cid: idVal,
+      };
     }
 
     if (area === 'account' && action === 'admindeleteaccount') {
       await this.prisma.account.updateMany({
-        where: { aid: this.numberValue(params.p1) },
+        where: { aid: idVal },
         data: { isActive: false },
       });
+      return {
+        success: true,
+        message: 'Account deleted successfully',
+        resultId: idVal,
+        ResultId: idVal,
+        aid: idVal,
+      };
     }
 
     if (area === 'account' && (action === 'deleteaccoungroupsbyagid' || action === 'deleteaccountgroupsbyagid')) {
       await this.prisma.accountGroup.updateMany({
-        where: { agid: this.numberValue(params.p1) },
+        where: { agid: idVal },
         data: { isActive: false },
       });
 
       return {
         success: true,
         message: 'Account group deleted successfully',
+        resultId: idVal,
+        ResultId: idVal,
+        agid: idVal,
       };
     }
 
@@ -237,6 +255,8 @@ export class CompatibilityController {
     return {
       success: true,
       message: 'Deleted successfully',
+      resultId: idVal || 1,
+      ResultId: idVal || 1,
     };
   }
 
@@ -1591,21 +1611,26 @@ export class CompatibilityController {
     const gid = this.numberValue(body.gid || body.GID || 1);
     const groupname = this.stringValue(body.groupname || body.name || 'Default Group') || 'Default Group';
     const persistedData = this.cleanDataForPersist(body);
-    const record = agid
-      ? await this.prisma.accountGroup.upsert({
-          where: { agid },
-          update: { aid, gid, name: groupname, groupname, isActive: this.booleanValue(body.isActive, true), data: persistedData },
-          create: { agid, aid, gid, name: groupname, groupname, isActive: this.booleanValue(body.isActive, true), data: persistedData },
-        })
-      : await this.prisma.accountGroup.create({
-          data: { aid, gid, name: groupname, groupname, isActive: this.booleanValue(body.isActive, true), data: persistedData },
-        });
+    let effectiveAgid = agid;
+
+    if (!effectiveAgid) {
+      const maxGroup = await this.prisma.accountGroup.aggregate({ _max: { agid: true } });
+      effectiveAgid = (maxGroup?._max?.agid || 0) + 1;
+    }
+
+    const record = await this.prisma.accountGroup.upsert({
+      where: { agid: effectiveAgid },
+      update: { aid, gid, name: groupname, groupname, isActive: this.booleanValue(body.isActive, true), data: persistedData },
+      create: { agid: effectiveAgid, aid, gid, name: groupname, groupname, isActive: this.booleanValue(body.isActive, true), data: persistedData },
+    });
     return {
       success: true,
       message: 'Account group saved successfully',
       group: this.toLegacyAccountGroup(record),
       resultId: record.agid,
       ResultId: record.agid,
+      agid: record.agid,
+      ...this.toLegacyAccountGroup(record),
     };
   }
 
@@ -1613,47 +1638,45 @@ export class CompatibilityController {
     const aid = this.numberValue(body.aid || body.AID || body.id || body.resultId || body.ResultId || query.aid);
     const name = this.stringValue(body.name || body.accName || body.accountName || body.Account || 'Account') || 'Account';
     const persistedData = this.cleanDataForPersist(body);
-    const record = aid
-      ? await this.prisma.account.upsert({
-          where: { aid },
-          update: {
-            name,
-            accName: this.stringValue(body.accName || body.accountName || name) || name,
-            accountName: this.stringValue(body.accountName || body.accName || name) || name,
-            url: this.stringValue(body.url || body.Url || '') || null,
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-          create: {
-            aid,
-            name,
-            accName: this.stringValue(body.accName || body.accountName || name) || name,
-            accountName: this.stringValue(body.accountName || body.accName || name) || name,
-            url: this.stringValue(body.url || body.Url || '') || null,
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        })
-      : await this.prisma.account.create({
-          data: {
-            name,
-            accName: this.stringValue(body.accName || body.accountName || name) || name,
-            accountName: this.stringValue(body.accountName || body.accName || name) || name,
-            url: this.stringValue(body.url || body.Url || '') || null,
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        });
+    let effectiveAid = aid;
+
+    if (!effectiveAid) {
+      const maxAccount = await this.prisma.account.aggregate({ _max: { aid: true } });
+      effectiveAid = (maxAccount?._max?.aid || 0) + 1;
+    }
+
+    const record = await this.prisma.account.upsert({
+      where: { aid: effectiveAid },
+      update: {
+        name,
+        accName: this.stringValue(body.accName || body.accountName || name) || name,
+        accountName: this.stringValue(body.accountName || body.accName || name) || name,
+        url: this.stringValue(body.url || body.Url || '') || null,
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+      create: {
+        aid: effectiveAid,
+        name,
+        accName: this.stringValue(body.accName || body.accountName || name) || name,
+        accountName: this.stringValue(body.accountName || body.accName || name) || name,
+        url: this.stringValue(body.url || body.Url || '') || null,
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+    });
     return {
       success: true,
       message: 'Account saved successfully',
-      account: this.toLegacyAccount(record),
       resultId: record.aid,
       ResultId: record.aid,
+      aid: record.aid,
+      account: this.toLegacyAccount(record),
+      ...this.toLegacyAccount(record),
     };
   }
 
-   private async listCompanies(filter: {
+  private async listCompanies(filter: {
   aid?: number;
   cid?: number;
   activeOnly?: boolean;
@@ -1806,7 +1829,15 @@ export class CompatibilityController {
       create: { cid: record.cid, includeAssets: true, includeEntities: true, includeFilings: true },
     });
 
-    return { success: true, message: 'Company saved successfully', company: this.toLegacyCompany(record) };
+    return {
+      success: true,
+      message: 'Company saved successfully',
+      resultId: record.cid,
+      ResultId: record.cid,
+      cid: record.cid,
+      company: this.toLegacyCompany(record),
+      ...this.toLegacyCompany(record),
+    };
   }
 
   private async updateCompanyFilingFlags(body: AnyRecord, query: AnyRecord) {
@@ -1884,40 +1915,39 @@ export class CompatibilityController {
   private async saveFiling(body: AnyRecord, params: AnyRecord, query: AnyRecord) {
     const fid = this.numberValue(body.fid || body.FID || query.fid || params.p1);
     const persistedData = this.cleanDataForPersist(body);
-    const record = fid
-      ? await this.prisma.filing.upsert({
-          where: { fid },
-          update: {
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            uid: this.optionalNumber(body.uid || body.Uid || body.userId),
-            status: this.stringValue(body.status || body.Status || 'Draft') || 'Draft',
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-          create: {
-            fid,
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            uid: this.optionalNumber(body.uid || body.Uid || body.userId),
-            status: this.stringValue(body.status || body.Status || 'Draft') || 'Draft',
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        })
-      : await this.prisma.filing.create({
-          data: {
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            uid: this.optionalNumber(body.uid || body.Uid || body.userId),
-            status: this.stringValue(body.status || body.Status || 'Draft') || 'Draft',
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        });
+    let effectiveFid = fid;
+
+    if (!effectiveFid) {
+      const maxFiling = await this.prisma.filing.aggregate({ _max: { fid: true } });
+      effectiveFid = (maxFiling?._max?.fid || 0) + 1;
+    }
+
+    const record = await this.prisma.filing.upsert({
+      where: { fid: effectiveFid },
+      update: {
+        cid: this.numberValue(body.cid || body.Cid || 1),
+        uid: this.optionalNumber(body.uid || body.Uid || body.userId),
+        status: this.stringValue(body.status || body.Status || 'Draft') || 'Draft',
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+      create: {
+        fid: effectiveFid,
+        cid: this.numberValue(body.cid || body.Cid || 1),
+        uid: this.optionalNumber(body.uid || body.Uid || body.userId),
+        status: this.stringValue(body.status || body.Status || 'Draft') || 'Draft',
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+    });
     return {
       success: true,
       message: 'Filing saved successfully',
-      filing: this.decorateRecord('filing', record),
       resultId: record.fid,
       ResultId: record.fid,
+      fid: record.fid,
+      filing: this.decorateRecord('filing', record),
+      ...this.decorateRecord('filing', record),
     };
   }
 
@@ -1939,98 +1969,90 @@ export class CompatibilityController {
   private async saveInvoice(body: AnyRecord, query: AnyRecord) {
     const invoiceId = this.numberValue(body.invoiceId || body.InvoiceId || body.id || body.resultId || body.ResultId || query.invoiceId);
     const persistedData = this.cleanDataForPersist(body);
-    const record = invoiceId
-      ? await this.prisma.invoice.upsert({
-          where: { invoiceId },
-          update: {
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            aid: this.numberValue(body.aid || body.Aid || 1),
-            agid: this.optionalNumber(body.agid || body.Agid),
-            isSent: this.booleanValue(body.isSent, false),
-            isBilled: this.booleanValue(body.isBilled, false),
-            isPaid: this.booleanValue(body.isPaid, false),
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-          create: {
-            invoiceId,
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            aid: this.numberValue(body.aid || body.Aid || 1),
-            agid: this.optionalNumber(body.agid || body.Agid),
-            isSent: this.booleanValue(body.isSent, false),
-            isBilled: this.booleanValue(body.isBilled, false),
-            isPaid: this.booleanValue(body.isPaid, false),
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        })
-      : await this.prisma.invoice.create({
-          data: {
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            aid: this.numberValue(body.aid || body.Aid || 1),
-            agid: this.optionalNumber(body.agid || body.Agid),
-            isSent: this.booleanValue(body.isSent, false),
-            isBilled: this.booleanValue(body.isBilled, false),
-            isPaid: this.booleanValue(body.isPaid, false),
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        });
+    let effectiveInvoiceId = invoiceId;
+
+    if (!effectiveInvoiceId) {
+      const maxInvoice = await this.prisma.invoice.aggregate({ _max: { invoiceId: true } });
+      effectiveInvoiceId = (maxInvoice?._max?.invoiceId || 0) + 1;
+    }
+
+    const record = await this.prisma.invoice.upsert({
+      where: { invoiceId: effectiveInvoiceId },
+      update: {
+        cid: this.numberValue(body.cid || body.Cid || 1),
+        aid: this.numberValue(body.aid || body.Aid || 1),
+        agid: this.optionalNumber(body.agid || body.Agid),
+        isSent: this.booleanValue(body.isSent, false),
+        isBilled: this.booleanValue(body.isBilled, false),
+        isPaid: this.booleanValue(body.isPaid, false),
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+      create: {
+        invoiceId: effectiveInvoiceId,
+        cid: this.numberValue(body.cid || body.Cid || 1),
+        aid: this.numberValue(body.aid || body.Aid || 1),
+        agid: this.optionalNumber(body.agid || body.Agid),
+        isSent: this.booleanValue(body.isSent, false),
+        isBilled: this.booleanValue(body.isBilled, false),
+        isPaid: this.booleanValue(body.isPaid, false),
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+    });
     return {
       success: true,
       message: 'Invoice saved successfully',
-      invoice: this.decorateRecord('invoice', record),
       resultId: record.invoiceId,
       ResultId: record.invoiceId,
+      invoiceId: record.invoiceId,
+      invoice: this.decorateRecord('invoice', record),
+      ...this.decorateRecord('invoice', record),
     };
   }
 
   private async saveMonthlyInvoice(body: AnyRecord, query: AnyRecord) {
     const invoiceId = this.numberValue(body.invoiceId || body.InvoiceId || body.id || body.resultId || body.ResultId || query.invoiceId);
     const persistedData = this.cleanDataForPersist(body);
-    const record = invoiceId
-      ? await this.prisma.monthlyInvoice.upsert({
-          where: { invoiceId },
-          update: {
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            aid: this.numberValue(body.aid || body.Aid || 1),
-            agid: this.optionalNumber(body.agid || body.Agid),
-            isSent: this.booleanValue(body.isSent, false),
-            isBilled: this.booleanValue(body.isBilled, false),
-            isPaid: this.booleanValue(body.isPaid, false),
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-          create: {
-            invoiceId,
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            aid: this.numberValue(body.aid || body.Aid || 1),
-            agid: this.optionalNumber(body.agid || body.Agid),
-            isSent: this.booleanValue(body.isSent, false),
-            isBilled: this.booleanValue(body.isBilled, false),
-            isPaid: this.booleanValue(body.isPaid, false),
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        })
-      : await this.prisma.monthlyInvoice.create({
-          data: {
-            cid: this.numberValue(body.cid || body.Cid || 1),
-            aid: this.numberValue(body.aid || body.Aid || 1),
-            agid: this.optionalNumber(body.agid || body.Agid),
-            isSent: this.booleanValue(body.isSent, false),
-            isBilled: this.booleanValue(body.isBilled, false),
-            isPaid: this.booleanValue(body.isPaid, false),
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        });
+    let effectiveInvoiceId = invoiceId;
+
+    if (!effectiveInvoiceId) {
+      const maxInvoice = await this.prisma.monthlyInvoice.aggregate({ _max: { invoiceId: true } });
+      effectiveInvoiceId = (maxInvoice?._max?.invoiceId || 0) + 1;
+    }
+
+    const record = await this.prisma.monthlyInvoice.upsert({
+      where: { invoiceId: effectiveInvoiceId },
+      update: {
+        cid: this.numberValue(body.cid || body.Cid || 1),
+        aid: this.numberValue(body.aid || body.Aid || 1),
+        agid: this.optionalNumber(body.agid || body.Agid),
+        isSent: this.booleanValue(body.isSent, false),
+        isBilled: this.booleanValue(body.isBilled, false),
+        isPaid: this.booleanValue(body.isPaid, false),
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+      create: {
+        invoiceId: effectiveInvoiceId,
+        cid: this.numberValue(body.cid || body.Cid || 1),
+        aid: this.numberValue(body.aid || body.Aid || 1),
+        agid: this.optionalNumber(body.agid || body.Agid),
+        isSent: this.booleanValue(body.isSent, false),
+        isBilled: this.booleanValue(body.isBilled, false),
+        isPaid: this.booleanValue(body.isPaid, false),
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+    });
     return {
       success: true,
       message: 'Monthly invoice saved successfully',
-      invoice: this.decorateRecord('monthlyInvoice', record),
       resultId: record.invoiceId,
       ResultId: record.invoiceId,
+      invoiceId: record.invoiceId,
+      invoice: this.decorateRecord('monthlyInvoice', record),
+      ...this.decorateRecord('monthlyInvoice', record),
     };
   }
 

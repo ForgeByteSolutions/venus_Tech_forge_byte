@@ -543,7 +543,11 @@ export class AdminCompanyComponent implements OnInit {
         this.isLoading = false;
         
         let detail = response;
-        if (Array.isArray(response)) {
+        if (response && response.data) {
+           detail = response.data;
+        } else if (response && response.company) {
+           detail = response.company;
+        } else if (Array.isArray(response)) {
            const table = response.find((t: any) => t.tableName === 'Table1') || response[0];
            detail = table?.rows?.[0] || table || response[0];
         } else if (response && response.tableName && Array.isArray(response.rows)) {
@@ -551,7 +555,7 @@ export class AdminCompanyComponent implements OnInit {
         }
 
         console.log('Company detailed data:', detail);
-        this.selectedCompany = this.normalizeCompany(detail);
+        this.selectedCompany = { ...company, ...this.normalizeCompany(detail) };
         this.isAddMode = false;
         this.isCompanyModalOpen = true;
       },

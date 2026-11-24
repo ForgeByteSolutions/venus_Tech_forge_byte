@@ -1787,9 +1787,9 @@ export class CompatibilityController {
     let effectiveCid = cid;
 
     if (!effectiveCid && companyIdValue) {
-      const existing = await this.prisma.company.findFirst({ where: { companyId: companyIdValue } });
-      if (existing?.cid) {
-        effectiveCid = existing.cid;
+      const existingByCode = await this.prisma.company.findFirst({ where: { companyId: companyIdValue } });
+      if (existingByCode?.cid) {
+        effectiveCid = existingByCode.cid;
       }
     }
 
@@ -1798,28 +1798,36 @@ export class CompatibilityController {
       effectiveCid = (maxCompany?._max?.cid || 0) + 1;
     }
 
+    const existing = await this.prisma.company.findUnique({ where: { cid: effectiveCid } });
+    const resolvedCompanyId = companyIdValue || existing?.companyId || null;
+    const existingData = this.toRecord(existing?.data);
+    const mergedData = { ...existingData, ...persistedData };
+    const resolvedIsActive = body.isActive !== undefined
+      ? this.booleanValue(body.isActive, true)
+      : (body.IsActive !== undefined ? this.booleanValue(body.IsActive, true) : (existing ? existing.isActive : true));
+
     const record = await this.prisma.company.upsert({
       where: { cid: effectiveCid },
       update: {
         aid,
         agid,
-        companyId: companyIdValue,
+        companyId: resolvedCompanyId,
         companyName,
         fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
         tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
-        isActive: this.booleanValue(body.isActive, true),
-        data: persistedData,
+        isActive: resolvedIsActive,
+        data: mergedData,
       },
       create: {
         cid: effectiveCid,
         aid,
         agid,
-        companyId: companyIdValue,
+        companyId: resolvedCompanyId,
         companyName,
         fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
         tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
-        isActive: this.booleanValue(body.isActive, true),
-        data: persistedData,
+        isActive: resolvedIsActive,
+        data: mergedData,
       },
     });
 
@@ -2715,20 +2723,52 @@ export class CompatibilityController {
 
   private toLegacyCompany(company: AnyRecord) {
     const persisted = this.toRecord(company?.data);
+    const resolvedCompanyId = company.companyId || persisted.company_id || persisted.companyID || persisted.CompanyID || persisted.companyId || '';
+    const resolvedTitle = company.companyName || company.fullName || company.tradingName || persisted.Title || persisted.title || 'Company';
+    const validationEmail = persisted.validation_email || persisted.validationEmail || persisted.VEmail || persisted.email || persisted.eMail || '';
+    const contactEmail = persisted.email || persisted.eMail || persisted.contactEmail || validationEmail;
+    const billingEmail = persisted.billing_email || persisted.billingEmail || '';
+    const contactName = persisted.ContactName || persisted.contactName || persisted.contact_name || '';
+    const billingName = persisted.BillingName || persisted.billingName || persisted.billing_name || '';
+    const phone1 = persisted.phone1 || persisted.phone_1 || '';
+    const phone2 = persisted.phone2 || persisted.phone_2 || '';
+    const description = persisted.description || persisted.notes || '';
+    const isActive = company.isActive !== undefined ? company.isActive : (persisted.isActive !== undefined ? persisted.isActive : true);
+
     return {
       ...persisted,
       ...company,
       id: company.cid,
       cid: company.cid,
       CID: company.cid,
-      company_id: company.companyId,
-      companyName: company.companyName || company.fullName || company.tradingName,
-      CompanyName: company.companyName || company.fullName || company.tradingName,
-      full_name: company.fullName || company.companyName || company.tradingName,
-      trading_name: company.tradingName || company.fullName || company.companyName,
-      Title: company.companyName || company.fullName || company.tradingName,
-      title: company.companyName || company.fullName || company.tradingName,
-      active: company.isActive,
+      companyId: resolvedCompanyId,
+      company_id: resolvedCompanyId,
+      companyID: resolvedCompanyId,
+      CompanyID: resolvedCompanyId,
+      companyName: resolvedTitle,
+      CompanyName: resolvedTitle,
+      full_name: company.fullName || resolvedTitle,
+      trading_name: company.tradingName || resolvedTitle,
+      Title: resolvedTitle,
+      title: resolvedTitle,
+      validation_email: validationEmail,
+      validationEmail: validationEmail,
+      VEmail: validationEmail,
+      email: contactEmail,
+      eMail: contactEmail,
+      billing_email: billingEmail,
+      billingEmail: billingEmail,
+      ContactName: contactName,
+      contactName: contactName,
+      BillingName: billingName,
+      billingName: billingName,
+      phone1,
+      phone2,
+      description,
+      notes: description,
+      isActive,
+      IsActive: isActive,
+      active: isActive,
     };
   }
 

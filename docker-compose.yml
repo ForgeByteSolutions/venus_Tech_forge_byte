@@ -1,22 +1,56 @@
 services:
-
   postgres:
-    image: postgres:16
-
+    build:
+      context: .
+      dockerfile: postgres.Dockerfile
+    image: venu-tech-postgres:latest
     container_name: venu-tech-postgres
-
     restart: always
-
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: venu_tech_db
-
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5433:5432"
-
+      - "5435:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - venu_db_data_fresh:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d venu_tech_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: venu-tech-backend:latest
+    container_name: venu-tech-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres123@postgres:5432/venu_tech_db?schema=public"
+      PORT: 3000
+      JWT_SECRET: "venus-secret-token-key-change-in-production-2026"
+      JWT_REFRESH_SECRET: "venus-refresh-secret-token-key-change-in-production-2026"
+      FRONTEND_URL: "*"
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: venu-tech-frontend:latest
+    container_name: venu-tech-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
 
 volumes:
-  postgres_data:
+  venu_db_data_fresh:

@@ -30,6 +30,8 @@ const fallbackRoles = [
 const areaToModel: Record<string, string> = {
   assets: 'asset',
   asset: 'asset',
+  entities: 'entity',
+  entity: 'entity',
   catstatus: 'categoryStatus',
   etoe: 'entityToEntity',
   etogen: 'entityToGeneratorAsset',
@@ -43,6 +45,10 @@ const areaToModel: Record<string, string> = {
   selflimit: 'selfLimitation',
   selflimitation: 'selfLimitation',
   or: 'operatingReserve',
+  filing: 'filing',
+  filings: 'filing',
+  invoice: 'invoice',
+  invoices: 'invoice',
   fercapi: 'commonLookup',
 };
 
@@ -77,6 +83,7 @@ export class CompatibilityController {
     if (area === 'filing' || area === 'filings') return this.handleFilingGet(action, params);
     if (area === 'invoice') return this.handleInvoiceGet(action, params);
     if (area === 'assets' || area === 'asset') return this.handleGenericGet('asset', action, params, query);
+    if (area === 'entities' || area === 'entity') return this.handleGenericGet('entity', action, params, query);
     if (area === 'catstatus') return this.handleGenericGet('categoryStatus', action, params, query);
     if (area === 'etoe') return this.handleGenericGet('entityToEntity', action, params, query);
     if (area === 'etogen') return this.handleGenericGet('entityToGeneratorAsset', action, params, query);
@@ -118,6 +125,7 @@ export class CompatibilityController {
     if (area === 'filing' || area === 'filings') return this.handleFilingPost(action, body, params, query);
     if (area === 'invoice') return this.handleInvoicePost(action, body, params, query);
     if (area === 'assets' || area === 'asset') return this.handleGenericPost('asset', action, body, params, query);
+    if (area === 'entities' || area === 'entity') return this.handleGenericPost('entity', action, body, params, query);
     if (area === 'catstatus') return this.handleGenericPost('categoryStatus', action, body, params, query);
     if (area === 'etoe') return this.handleGenericPost('entityToEntity', action, body, params, query);
     if (area === 'etogen') return this.handleGenericPost('entityToGeneratorAsset', action, body, params, query);
@@ -158,6 +166,7 @@ export class CompatibilityController {
     if (area === 'filing' || area === 'filings') return this.handleFilingPost(action, body, params, query);
     if (area === 'invoice') return this.handleInvoicePost(action, body, params, query);
     if (area === 'assets' || area === 'asset') return this.handleGenericPost('asset', action, body, params, query);
+    if (area === 'entities' || area === 'entity') return this.handleGenericPost('entity', action, body, params, query);
     if (area === 'catstatus') return this.handleGenericPost('categoryStatus', action, body, params, query);
     if (area === 'etoe') return this.handleGenericPost('entityToEntity', action, body, params, query);
     if (area === 'etogen') return this.handleGenericPost('entityToGeneratorAsset', action, body, params, query);
@@ -765,7 +774,12 @@ export class CompatibilityController {
     if (action === 'getinvoicebyid') return this.getInvoiceById(this.numberValue(params.p1));
     if (action === 'getadmingetinvoicemonthlycountbycid') return this.getMonthlyInvoiceCount(this.numberValue(params.p1), this.numberValue(params.p2));
     if (action === 'getadmingetinvoicemonthlybyid') return this.getMonthlyInvoiceById(this.numberValue(params.p1));
-    if (action === 'getfilingsforinvoicebycid' || action === 'getfilingsforinvoicesbycid') return this.listFilingsByCid(this.numberValue(params.p1));
+    if (
+      action === 'getfilingsforinvoicebycid' ||
+      action === 'getfilingsforinvoicesbycid' ||
+      action === 'admingetfilingsforinvoices' ||
+      action === 'admingetfilingsforinvoicesbycid'
+    ) return this.listFilingsByCid(this.numberValue(params.p1));
     return this.listInvoicesByCid(this.numberValue(params.p1));
   }
 
@@ -1175,7 +1189,7 @@ export class CompatibilityController {
     const idValue = this.resolveIdValue(modelName, body, params, query);
     const data = this.buildModelData(modelName, body, params, query);
 
-    if (idValue && client.upsert) {
+    if (idValue && (client.upsert || client.update)) {
       const existing = await client.findUnique?.({ where: { [idField]: idValue } });
       if (existing) {
         const updated = await client.update({ where: { [idField]: idValue }, data });
@@ -1183,6 +1197,18 @@ export class CompatibilityController {
       }
       const created = await client.create({ data: { ...data, [idField]: idValue } });
       return this.attachResultId(modelName, created);
+    }
+
+    if (!idValue && client.aggregate) {
+      try {
+        const maxAgg = await client.aggregate({ _max: { [idField]: true } });
+        const maxVal = maxAgg?._max?.[idField];
+        if (typeof maxVal === 'number' && maxVal > 0) {
+          data[idField] = maxVal + 1;
+        }
+      } catch {
+        // ignore if aggregate not supported
+      }
     }
 
     const created = await client.create({ data });
@@ -1195,6 +1221,10 @@ export class CompatibilityController {
     const idField = this.idFieldForModel(modelName);
     const idValue = this.numberValue(params.p1);
     if (!idValue) return;
+    if (modelName === 'imssParameter' || modelName === 'ipssParameter') {
+      await client.deleteMany({ where: { [idField]: idValue } });
+      return { success: true, resultId: idValue, ResultId: idValue };
+    }
     if (client.updateMany) {
       await client.updateMany({ where: { [idField]: idValue }, data: { isActive: false } });
       return { success: true, resultId: idValue, ResultId: idValue };
@@ -1207,6 +1237,8 @@ export class CompatibilityController {
     const decorated = this.decorateRecord(modelName, record) as AnyRecord;
     const resultId = this.resolveResultId(modelName, decorated);
     return {
+      success: true,
+      message: `${modelName} saved successfully`,
       ...decorated,
       resultId,
       ResultId: resultId,
@@ -1738,43 +1770,35 @@ export class CompatibilityController {
       }
     }
 
-    const record = effectiveCid
-      ? await this.prisma.company.upsert({
-          where: { cid: effectiveCid },
-          update: {
-            aid,
-            agid,
-            companyId: companyIdValue,
-            companyName,
-            fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
-            tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-          create: {
-            cid: effectiveCid,
-            aid,
-            agid,
-            companyId: companyIdValue,
-            companyName,
-            fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
-            tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        })
-      : await this.prisma.company.create({
-          data: {
-            aid,
-            agid,
-            companyId: companyIdValue,
-            companyName,
-            fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
-            tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
-            isActive: this.booleanValue(body.isActive, true),
-            data: persistedData,
-          },
-        });
+    if (!effectiveCid) {
+      const maxCompany = await this.prisma.company.aggregate({ _max: { cid: true } });
+      effectiveCid = (maxCompany?._max?.cid || 0) + 1;
+    }
+
+    const record = await this.prisma.company.upsert({
+      where: { cid: effectiveCid },
+      update: {
+        aid,
+        agid,
+        companyId: companyIdValue,
+        companyName,
+        fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
+        tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+      create: {
+        cid: effectiveCid,
+        aid,
+        agid,
+        companyId: companyIdValue,
+        companyName,
+        fullName: this.stringValue(body.fullName || body.full_name || companyName) || companyName,
+        tradingName: this.stringValue(body.tradingName || body.trading_name || companyName) || companyName,
+        isActive: this.booleanValue(body.isActive, true),
+        data: persistedData,
+      },
+    });
 
     await this.prisma.companyFilingFlags.upsert({
       where: { cid: record.cid },
@@ -2225,6 +2249,12 @@ export class CompatibilityController {
   private idAliasValue(modelName: string, body: AnyRecord) {
     if (!body) return undefined;
     switch (modelName) {
+      case 'entity':
+        return body.entityid ?? body.entityId ?? body.EntityId ?? body.entity_id ?? body.id;
+      case 'asset':
+        return body.assetid ?? body.assetId ?? body.AssetId ?? body.asset_id ?? body.id;
+      case 'filing':
+        return body.fid ?? body.Fid ?? body.filingId ?? body.filing_id ?? body.id;
       case 'mbrAuthorization':
         return body.mbr_authorization_id ?? body.mbrauthId ?? body.authId;
       case 'categoryStatus':
@@ -2986,6 +3016,9 @@ export class CompatibilityController {
     const mapping: Record<string, string> = {
       tblasset: 'asset',
       asset: 'asset',
+      tblentity: 'entity',
+      entity: 'entity',
+      entities: 'entity',
       mbrcategorystatus: 'categoryStatus',
       categorystatus: 'categoryStatus',
       mbrmitigations: 'mitigation',

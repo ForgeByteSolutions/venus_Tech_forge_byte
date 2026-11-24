@@ -22,7 +22,13 @@ async function bootstrap() {
   // Enable CORS for the frontend. Allow explicit origins from FRONTEND_URL
   // or fall back to localhost dev and the known Railway frontend host.
   const frontendEnv = process.env.FRONTEND_URL || '';
-  const fallbackOrigins = [DEFAULT_FRONTEND_ORIGIN, 'https://vigilant-cooperation-production-b1dd.up.railway.app'];
+  const fallbackOrigins = [
+    DEFAULT_FRONTEND_ORIGIN,
+    'https://vigilant-cooperation-production-b1dd.up.railway.app',
+    'https://caring-reverence-production-e548.up.railway.app',
+    'https://venustechforgebyte-production.up.railway.app',
+    'https://venustechforgebyte-production-3e03.up.railway.app',
+  ];
 
   const allowedOrigins = frontendEnv
     ? frontendEnv
@@ -33,9 +39,19 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. server-to-server, mobile clients)
+      // Allow requests with no origin (e.g. server-to-server, curl, Postman, mobile clients)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow known deployment domains
+      if (
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+        /^https:\/\/.*\.railway\.app$/.test(origin) ||
+        /^https:\/\/.*\.vercel\.app$/.test(origin) ||
+        /^https:\/\/.*\.netlify\.app$/.test(origin) ||
+        /^https:\/\/.*\.onrender\.com$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
       console.warn(`Blocked CORS origin: ${origin}`);
       return callback(new Error('Origin not allowed by CORS'));
     },

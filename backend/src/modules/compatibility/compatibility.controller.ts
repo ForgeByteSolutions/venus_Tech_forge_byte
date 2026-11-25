@@ -571,6 +571,14 @@ export class CompatibilityController {
       return this.getBalancingAuthorityDropdown(resolvedValueField, resolvedTextField);
     }
 
+    if (tableName.includes('lookregion') || tableName.includes('region')) {
+      return this.getRegionDropdown(resolvedValueField, resolvedTextField);
+    }
+
+    if (tableName.includes('lookentityidtype') || tableName.includes('entityidtype') || tableName.includes('entity_id_type')) {
+      return this.getEntityIdTypeDropdown(resolvedValueField, resolvedTextField);
+    }
+
     const modelName = this.dropdownModelForTable(tableName);
     if (!modelName) return [];
 
@@ -788,7 +796,7 @@ export class CompatibilityController {
   }
 
   private async handleUserPost(action: string, body: AnyRecord, params: AnyRecord, query: AnyRecord) {
-    if (action === 'createuser') return this.createUser(body);
+    if (action === 'createuser' || action === 'insupduser') return this.createUser(body);
     if (action === 'updateuser' || action === 'updatemyprofile') return this.updateUser(body);
     if (action === 'updateuseractivatebycid') return this.updateUserActivateByCID(body);
     if (action === 'deleteuserinactivesbycid') return this.deleteUserInActivesByCID(body);
@@ -1176,8 +1184,23 @@ export class CompatibilityController {
     return { success: true, message: 'Saved successfully', data: body ?? {} };
   }
 
-  private async saveImssLike(body: AnyRecord, studyModel: string, paramsModel: string) {
-    const study = await this.saveModelRecord(studyModel, body, {}, {});
+  private async saveImssLike(body: AnyRecord | AnyRecord[], studyModel: string, paramsModel: string) {
+    if (Array.isArray(body)) {
+      for (const item of body) {
+        await this.saveModelRecord(paramsModel, item, {}, {});
+      }
+      return {
+        success: true,
+        status: true,
+        message: 'Study parameters saved successfully',
+        resultId: 1,
+        ResultId: 1,
+        pid: 1,
+      };
+    }
+
+    const study = await this.saveModelRecord(studyModel, body, {}, {}) as AnyRecord;
+    const studyPid = study?.pid || study?.id || study?.resultId || study?.ResultId || (study?.data && (study.data.pid || study.data.id)) || 1;
     const paramsList = this.extractParamList(body);
 
     if (paramsList.length) {
@@ -1185,15 +1208,20 @@ export class CompatibilityController {
         await this.saveModelRecord(paramsModel, {
           ...param,
           cid: this.numberValue(body.cid || body.Cid || 1),
-          [paramsModel === 'imssParameter' ? 'imssId' : 'ipssId']: (study as AnyRecord).pid || (study as AnyRecord).pid,
+          [paramsModel === 'imssParameter' ? 'imssId' : 'ipssId']: studyPid,
         }, {}, {});
       }
     }
 
     return {
       success: true,
+      status: true,
       message: `${studyModel} saved successfully`,
+      resultId: studyPid,
+      ResultId: studyPid,
+      pid: studyPid,
       data: study,
+      ...study,
     };
   }
 
@@ -1434,12 +1462,24 @@ export class CompatibilityController {
   private async listUsers(filter: { cid?: number; isActive?: boolean }) {
     const users = await this.prisma.user.findMany({
       where: {
-        ...(filter.cid ? { cid: filter.cid } : {}),
         ...(filter.isActive === undefined ? {} : { isActive: filter.isActive }),
       },
       orderBy: { uid: 'asc' },
     });
-    return users.map((user) => this.toLegacyUser(user));
+
+    const filtered = filter.cid
+      ? users.filter((u) => {
+          if (u.cid === filter.cid) return true;
+          if (u.companyIds) {
+            const ids = String(u.companyIds).split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n));
+            if (ids.includes(filter.cid)) return true;
+          }
+          if (u.role === 'Site Admin') return true;
+          return false;
+        })
+      : users;
+
+    return filtered.map((user) => this.toLegacyUser(user));
   }
 
   private async listAccounts() {
@@ -2977,6 +3017,220 @@ export class CompatibilityController {
       };
     }
 
+    if (modelName === 'entityToEntity') {
+      const typeCd = merged.reportable_entity_ID_type_CD ?? merged.reportableEntityType ?? merged.entity_type ?? merged.Type ?? merged.type ?? '';
+      const repId = merged.reportable_entity_ID ?? merged.reportable_entity_id ?? merged.reporting_entity_id ?? merged.reportableEntityId ?? merged.reportableId ?? '';
+      const docket = merged.blanket_Auth_Docket_Number ?? merged.Blanket_Auth_Docket_Number ?? merged.blanket_authorization_docket ?? merged.docket ?? '';
+      const uTypeCd = merged.utility_ID_Type_CD ?? merged.Utility_ID_Type_CD ?? merged.utility_id_type ?? merged.utilityIdType ?? merged.utype ?? '';
+      const uId = merged.utility_ID ?? merged.Utility_ID ?? merged.utility_id ?? merged.utilityId ?? merged.uid ?? '';
+      const start = merged.relationship_start_date ?? merged.relationship_start_date1 ?? merged.relationshipStartDate ?? merged.start_date ?? '';
+      const end = merged.relationship_end_date ?? merged.relationship_end_date1 ?? merged.relationshipEndDate ?? merged.end_date ?? '';
+      return {
+        ...base,
+        entities_entities_id: merged.entities_entities_id ?? idValue,
+        reportable_entity_ID_type_CD: typeCd,
+        reportableEntityType: typeCd,
+        entity_type: typeCd,
+        Type: typeCd,
+        type: typeCd,
+        reportable_entity_ID: repId,
+        reportable_entity_id: repId,
+        reporting_entity_id: repId,
+        reportableEntityId: repId,
+        reportableId: repId,
+        Blanket_Auth_Docket_Number: docket,
+        blanket_Auth_Docket_Number: docket,
+        blanket_authorization_docket: docket,
+        docket,
+        Utility_ID_Type_CD: uTypeCd,
+        utility_ID_Type_CD: uTypeCd,
+        utility_id_type: uTypeCd,
+        utilityIdType: uTypeCd,
+        utype: uTypeCd,
+        Utility_ID: uId,
+        utility_ID: uId,
+        utility_id: uId,
+        utilityId: uId,
+        uid: uId,
+        relationship_start_date: start,
+        relationship_start_date1: start,
+        relationshipStartDate: start,
+        start_date: start,
+        start,
+        relationship_end_date: end,
+        relationship_end_date1: end,
+        relationshipEndDate: end,
+        end_date: end,
+        end,
+      };
+    }
+
+    if (modelName === 'entityToGeneratorAsset') {
+      const genAssetType = merged.generation_asset_type_id ?? merged.generation_asset_type_fk ?? merged.gen_asset_type ?? merged.assetType ?? merged.reportableEntityType ?? '';
+      const eiaPlantCode = merged.eia_plant_code ?? merged.eiaPlantCode ?? merged.asset_code ?? merged.eiaCode ?? '';
+      const eiaGenId = merged.eia_generator_id ?? merged.eiaGeneratorId ?? '';
+      const eiaUnitCode = merged.eia_unit_code ?? merged.eiaUnitCode ?? '';
+      const fercGenCode = merged.ferc_asset_Gen_code ?? merged.fercAssetGeneratorCode ?? '';
+      const entType = merged.entity_ID_type_CD ?? merged.entityType ?? merged.reportableEntityTypeSecond ?? '';
+      const entId = merged.entity_ID ?? merged.entityId ?? merged.reportableEntityId ?? '';
+      const relType = merged.relationship_type ?? merged.relationship_type_fk ?? merged.relationshipType ?? '';
+      const start = merged.relationship_start_date ?? merged.relationship_start_date1 ?? merged.relationStartDate ?? merged.relationshipStartDate ?? '';
+      const end = merged.relationship_end_date ?? merged.relationship_end_date1 ?? merged.relationEndDate ?? merged.relationshipEndDate ?? '';
+      const physBaa = merged.physical_location_Balancing_Authority_cd ?? merged.physical_location_balancing_authority_cd ?? merged.physicalLocationBaa ?? balancingAuthority;
+      const telemBaa = merged.telemetered_location_Balancing_Authority_cd ?? merged.telemetered_location_balancing_authority_cd ?? merged.telemeteredLocationBaa ?? '';
+      const amt = merged.amount ?? '0';
+      return {
+        ...base,
+        entities_genassets_id: merged.entities_genassets_id ?? idValue,
+        gen_asset_type: genAssetType,
+        assetType: genAssetType,
+        generation_asset_type_id: genAssetType,
+        generation_asset_type_fk: genAssetType,
+        eia_plant_code: eiaPlantCode,
+        eiaPlantCode,
+        asset_code: eiaPlantCode,
+        eiaCode: eiaPlantCode,
+        eia_generator_id: eiaGenId,
+        eiaGeneratorId: eiaGenId,
+        eia_unit_code: eiaUnitCode,
+        eiaUnitCode,
+        ferc_asset_Gen_code: fercGenCode,
+        fercAssetGeneratorCode: fercGenCode,
+        entity_ID_type_CD: entType,
+        entityType: entType,
+        reportableEntityTypeSecond: entType,
+        entity_ID: entId,
+        entityId: entId,
+        reportableEntityId: entId,
+        relationship_type: relType,
+        relationship_type_fk: relType,
+        relationshipType: relType,
+        relationship_start_date: start,
+        relationship_start_date1: start,
+        relationStartDate: start,
+        relationshipStartDate: start,
+        relationship_end_date: end,
+        relationship_end_date1: end,
+        relationEndDate: end,
+        relationshipEndDate: end,
+        physical_location_Balancing_Authority_cd: physBaa,
+        physical_location_balancing_authority_cd: physBaa,
+        physicalLocationBaa: physBaa,
+        telemetered_location_Balancing_Authority_cd: telemBaa,
+        telemetered_location_balancing_authority_cd: telemBaa,
+        telemeteredLocationBaa: telemBaa,
+        cap_rating_adjusted: merged.cap_rating_adjusted ?? merged.capRatingAdjusted ?? '0',
+        capRatingAdjusted: merged.cap_rating_adjusted ?? merged.capRatingAdjusted ?? '0',
+        adj_rating_options_fk: merged.adj_rating_options_fk ?? merged.adjustedRatingOptions ?? '',
+        adj_rating_options_cd: merged.adj_rating_options_cd ?? merged.adjustedRatingOptions ?? '',
+        adjustedRatingOptions: merged.adj_rating_options_fk ?? merged.adjustedRatingOptions ?? '',
+        alt_methodology_used: merged.alt_methodology_used ?? merged.altMethodologyUsed ?? '',
+        altMethodologyUsed: merged.alt_methodology_used ?? merged.altMethodologyUsed ?? '',
+        amount: amt,
+        explanatory_notes: merged.explanatory_notes ?? merged.explanatoryNotes ?? '',
+        explanatoryNotes: merged.explanatory_notes ?? merged.explanatoryNotes ?? '',
+      };
+    }
+
+    if (modelName === 'entityToPpa') {
+      const ppaAgreementId = merged.ppa_agreement_id ?? merged.ppaAgreementId ?? '';
+      const entType = merged.entity_ID_type_CD ?? merged.entityIdTypeCd ?? merged.entityType ?? '';
+      const entId = merged.entity_ID ?? merged.entityId ?? '';
+      const cpType = merged.counterparty_ID_type_CD ?? merged.counterpartyIdTypeCd ?? merged.counterpartyType ?? '';
+      const cpId = merged.counterparty_ID ?? merged.counterpartyId ?? '';
+      const start = merged.start_date ?? merged.start_date1 ?? merged.ppaStartDate ?? merged.startDate ?? '';
+      const schedEnd = merged.scheduled_end_date ?? merged.scheduled_end_date1 ?? merged.scheduledEndDate ?? '';
+      const actEnd = merged.actual_end_date ?? merged.actual_end_date1 ?? merged.actualEndDate ?? '';
+      const lastChange = merged.date_of_last_change ?? merged.date_of_last_change1 ?? merged.lastChangedDate ?? '';
+      const srcBaa = merged.source_balancing_authority_cd ?? merged.source_balancing_authority ?? merged.sourceBalancingAuthority ?? balancingAuthority;
+      const sinkBaa = merged.sink_balancing_authority_cd ?? merged.sink_balancing_authority ?? merged.sinkBalancingAuthority ?? '';
+      const amt = merged.amount ?? '0';
+      return {
+        ...base,
+        entities_ppa_id: merged.entities_ppa_id ?? idValue,
+        ppa_agreement_id: ppaAgreementId,
+        ppaAgreementId,
+        entity_ID_type_CD: entType,
+        entityIdTypeCd: entType,
+        entity_ID: entId,
+        entityId: entId,
+        entity: entId ? `${entType} (${entId})` : '',
+        counterparty_ID_type_CD: cpType,
+        counterpartyIdTypeCd: cpType,
+        counterparty_ID: cpId,
+        counterpartyId: cpId,
+        counterparty: cpId ? `${cpType} (${cpId})` : '',
+        start_date: start,
+        start_date1: start,
+        startDate: start,
+        scheduled_end_date: schedEnd,
+        scheduled_end_date1: schedEnd,
+        scheduledEndDate: schedEnd,
+        actual_end_date: actEnd,
+        actual_end_date1: actEnd,
+        actualEndDate: actEnd,
+        date_of_last_change: lastChange,
+        date_of_last_change1: lastChange,
+        lastChangedDate: lastChange,
+        source_balancing_authority_cd: srcBaa,
+        source_balancing_authority: srcBaa,
+        sourceBalancingAuthority: srcBaa,
+        sourceBaa: srcBaa,
+        source_balancing_authority_hub_cd: merged.source_balancing_authority_hub_cd ?? merged.sourceBalancingAuthorityHub ?? '',
+        sourceBalancingAuthorityHub: merged.source_balancing_authority_hub_cd ?? merged.sourceBalancingAuthorityHub ?? '',
+        sink_balancing_authority_cd: sinkBaa,
+        sink_balancing_authority: sinkBaa,
+        sinkBalancingAuthority: sinkBaa,
+        sink_balancing_authority_hub_cd: merged.sink_balancing_authority_hub_cd ?? merged.sinkBalancingAuthorityHub ?? '',
+        sinkBalancingAuthorityHub: merged.sink_balancing_authority_hub_cd ?? merged.sinkBalancingAuthorityHub ?? '',
+        ppa_type_fk: merged.ppa_type_fk ?? merged.ppaTypeFk ?? '',
+        supply_type_fk: merged.supply_type_fk ?? merged.supplyTypeFk ?? '',
+        generation_asset_type_fk: merged.generation_asset_type_fk ?? merged.genAssetType ?? '',
+        eia_plant_code: merged.eia_plant_code ?? merged.eiaPlantCode ?? '',
+        eia_generator_id: merged.eia_generator_id ?? merged.eiaGeneratorId ?? '',
+        eia_unit_code: merged.eia_unit_code ?? merged.eiaUnitCode ?? '',
+        ferc_asset_Gen_code: merged.ferc_asset_Gen_code ?? merged.fercAssetGeneratorCode ?? '',
+        amount: amt,
+        amount_adjusted: merged.amount_adjusted ?? merged.amountAdjusted ?? '0',
+        adj_rating_options_fk: merged.adj_rating_options_fk ?? merged.adjustedRatingOptions ?? '',
+        alt_methodology_used: merged.alt_methodology_used ?? merged.altMethodologyUsed ?? '',
+        explanatory_notes: merged.explanatory_notes ?? merged.explanatoryNotes ?? '',
+      };
+    }
+
+    if (modelName === 'entityToVerticalAsset') {
+      const entType = merged.entity_ID_type_CD ?? merged.entityIdType ?? merged.entity_ID_type_cd ?? '';
+      const entId = merged.entity_ID ?? merged.entityId ?? merged.entity_id ?? '';
+      const vaDesc = merged.vertical_asset_description ?? merged.verticalAssetDescription ?? '';
+      const start = merged.relationship_start_date ?? merged.relationship_start_date1 ?? merged.relationshipStartDate ?? '';
+      const end = merged.relationship_end_date ?? merged.relationship_end_date1 ?? merged.relationshipEndDate ?? '';
+      const baa = merged.balancing_Authority_cd ?? merged.balancing_authority ?? merged.balancingAuthority ?? balancingAuthority;
+      const notes = merged.explanatory_notes ?? merged.explanatoryNotes ?? '';
+      return {
+        ...base,
+        entities_vertical_asset_id: merged.entities_vertical_asset_id ?? idValue,
+        entity_ID_type_CD: entType,
+        entityIdType: entType,
+        entity_ID: entId,
+        entityId: entId,
+        vertical_asset_description: vaDesc,
+        verticalAssetDescription: vaDesc,
+        vertical_asset_type_fk: merged.vertical_asset_type_fk ?? merged.verticalAssetType ?? 1,
+        verticalAssetType: merged.vertical_asset_type_fk ?? merged.verticalAssetType ?? 1,
+        balancing_Authority_cd: baa,
+        balancing_authority: baa,
+        balancingAuthority: baa,
+        relationship_start_date: start,
+        relationship_start_date1: start,
+        relationshipStartDate: start,
+        relationship_end_date: end,
+        relationship_end_date1: end,
+        relationshipEndDate: end,
+        explanatory_notes: notes,
+        explanatoryNotes: notes,
+      };
+    }
+
     return base;
   }
 
@@ -3201,6 +3455,70 @@ export class CompatibilityController {
         text,
         ID: value,
         baa_desc: text,
+      };
+    });
+  }
+
+  private async getRegionDropdown(valueField: string, textField: string) {
+    const lookups = await this.prisma.commonLookup.findMany({
+      where: {
+        table: { in: ['lookregion', 'region', 'regions'] },
+        isActive: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    const records = lookups.length
+      ? lookups
+      : [
+          { value: 'CE', text: 'Central', id: 'CE', region_cd: 'CE', region_nm: 'Central' },
+          { value: 'NE', text: 'Northeast', id: 'NE', region_cd: 'NE', region_nm: 'Northeast' },
+          { value: 'NW', text: 'Northwest', id: 'NW', region_cd: 'NW', region_nm: 'Northwest' },
+          { value: 'SE', text: 'Southeast', id: 'SE', region_cd: 'SE', region_nm: 'Southeast' },
+          { value: 'SPP', text: 'Southwest Power Pool', id: 'SPP', region_cd: 'SPP', region_nm: 'Southwest Power Pool' },
+          { value: 'SW', text: 'Southwest', id: 'SW', region_cd: 'SW', region_nm: 'Southwest' },
+        ];
+
+    return records.map((record: AnyRecord) => {
+      const value = String(record[valueField] ?? record.region_cd ?? record.value ?? record.id ?? '').trim();
+      const text = String(record[textField] ?? record.region_nm ?? record.text ?? record.name ?? value).trim();
+      return {
+        ...record,
+        value,
+        text,
+        region_cd: value,
+        region_nm: text,
+      };
+    });
+  }
+
+  private async getEntityIdTypeDropdown(valueField: string, textField: string) {
+    const lookups = await this.prisma.commonLookup.findMany({
+      where: {
+        table: { in: ['lookentityidtype', 'entityidtype', 'entity_id_type'] },
+        isActive: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    const records = lookups.length
+      ? lookups
+      : [
+          { value: 'CID', text: 'Company Identifier (CID)', id: 'CID', entity_ID_type_cd: 'CID', entity_ID_type_nm: 'Company Identifier (CID)' },
+          { value: 'LEI', text: 'Legal Entity Identifier (LEI)', id: 'LEI', entity_ID_type_cd: 'LEI', entity_ID_type_nm: 'Legal Entity Identifier (LEI)' },
+          { value: 'GID', text: 'Group Identifier (GID)', id: 'GID', entity_ID_type_cd: 'GID', entity_ID_type_nm: 'Group Identifier (GID)' },
+          { value: 'Other', text: 'Other', id: 'Other', entity_ID_type_cd: 'Other', entity_ID_type_nm: 'Other' },
+        ];
+
+    return records.map((record: AnyRecord) => {
+      const value = String(record[valueField] ?? record.entity_ID_type_cd ?? record.value ?? record.id ?? '').trim();
+      const text = String(record[textField] ?? record.entity_ID_type_nm ?? record.text ?? record.name ?? value).trim();
+      return {
+        ...record,
+        value,
+        text,
+        entity_ID_type_cd: value,
+        entity_ID_type_nm: text,
       };
     });
   }

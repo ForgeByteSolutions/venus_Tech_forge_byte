@@ -1,11 +1,30 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const bcrypt = require('bcrypt');
 
 async function main() {
-  console.log('--- Cleaning up corrupted test companies and populating clean E2E demo data ---');
+  console.log('--- Cleaning up and populating full production-grade E2E data for Company 1 & 2 ---');
 
-  // 1. ACCOUNTS
-  const acc1 = await prisma.account.upsert({
+  // Password hash for all demo users
+  const passwordHash = await bcrypt.hash('Latha@2004', 10);
+
+  // 1. ROLES
+  const roles = [
+    { gid: 1, name: 'Site Admin', rolename: 'Site Admin' },
+    { gid: 2, name: 'Account Admin', rolename: 'Account Admin' },
+    { gid: 3, name: 'Company User', rolename: 'Company User' },
+    { gid: 4, name: 'Read Only User', rolename: 'Read Only User' },
+  ];
+  for (const r of roles) {
+    await prisma.role.upsert({
+      where: { gid: r.gid },
+      update: { name: r.name, rolename: r.rolename, isActive: true },
+      create: { gid: r.gid, name: r.name, rolename: r.rolename, isActive: true },
+    });
+  }
+
+  // 2. ACCOUNTS
+  await prisma.account.upsert({
     where: { aid: 1 },
     update: {
       name: 'Venus Demo Account',
@@ -24,7 +43,7 @@ async function main() {
     },
   });
 
-  const acc2 = await prisma.account.upsert({
+  await prisma.account.upsert({
     where: { aid: 2 },
     update: {
       name: 'ForgeByte Energy Partners',
@@ -56,12 +75,12 @@ async function main() {
     create: { agid: 2, aid: 1, gid: 2, name: 'Eastern Power Group', groupname: 'Eastern Power Group', isActive: true },
   });
 
-  // 2. COMPANIES (CLEAN & COMPLETE)
-  // Delete corrupted dummy companies 3, 4, 5
+  // Clean up corrupted dummy companies 3, 4, 5
   await prisma.company.deleteMany({
     where: { cid: { in: [3, 4, 5] } }
   });
 
+  // 3. COMPANIES
   const comp1Data = {
     company_id: 'C100001',
     companyID: 'C100001',
@@ -73,8 +92,8 @@ async function main() {
     tradingName: 'Venus Energy',
     validation_email: 'ferc.ereg@venusenergy.com',
     validationEmail: 'ferc.ereg@venusenergy.com',
-    email: 'guna@gmail.com',
-    eMail: 'guna@gmail.com',
+    email: 'puttuguna@gmail.com',
+    eMail: 'puttuguna@gmail.com',
     billing_email: 'billing@venusenergy.com',
     billingEmail: 'billing@venusenergy.com',
     ContactName: 'Guna Sekhar',
@@ -174,7 +193,108 @@ async function main() {
     create: { cid: 2, includeAssets: true, includeEntities: true, includeFilings: true },
   });
 
-  // 3. ASSETS
+  // 4. USERS
+  await prisma.user.upsert({
+    where: { email: 'puttugunasekhar@forgebyte.ai' },
+    update: {
+      name: 'Guna Sekhar (Admin)',
+      password: passwordHash,
+      role: 'Site Admin',
+      aid: 1,
+      cid: 1,
+      gid: 1,
+      companyIds: '1,2',
+      isActive: true,
+    },
+    create: {
+      name: 'Guna Sekhar (Admin)',
+      email: 'puttugunasekhar@forgebyte.ai',
+      password: passwordHash,
+      role: 'Site Admin',
+      aid: 1,
+      cid: 1,
+      gid: 1,
+      companyIds: '1,2',
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'puttuguna@gmail.com' },
+    update: {
+      name: 'Guna Sekhar',
+      password: passwordHash,
+      role: 'Account Admin',
+      aid: 1,
+      cid: 1,
+      gid: 2,
+      companyIds: '1,2',
+      isActive: true,
+    },
+    create: {
+      name: 'Guna Sekhar',
+      email: 'puttuguna@gmail.com',
+      password: passwordHash,
+      role: 'Account Admin',
+      aid: 1,
+      cid: 1,
+      gid: 2,
+      companyIds: '1,2',
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'preetham@forgebyte.ai' },
+    update: {
+      name: 'Preetham Kantubhukta',
+      password: passwordHash,
+      role: 'Company User',
+      aid: 1,
+      cid: 2,
+      gid: 3,
+      companyIds: '2',
+      isActive: true,
+    },
+    create: {
+      name: 'Preetham Kantubhukta',
+      email: 'preetham@forgebyte.ai',
+      password: passwordHash,
+      role: 'Company User',
+      aid: 1,
+      cid: 2,
+      gid: 3,
+      companyIds: '2',
+      isActive: true,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'audit@forgebyte.ai' },
+    update: {
+      name: 'Internal Auditor',
+      password: passwordHash,
+      role: 'Read Only User',
+      aid: 1,
+      cid: 2,
+      gid: 4,
+      companyIds: '2',
+      isActive: true,
+    },
+    create: {
+      name: 'Internal Auditor',
+      email: 'audit@forgebyte.ai',
+      password: passwordHash,
+      role: 'Read Only User',
+      aid: 1,
+      cid: 2,
+      gid: 4,
+      companyIds: '2',
+      isActive: true,
+    },
+  });
+
+  // 5. ASSETS (BOTH COMPANIES)
   await prisma.asset.upsert({
     where: { assetid: 1 },
     update: {
@@ -195,25 +315,29 @@ async function main() {
   });
 
   await prisma.asset.upsert({
-    where: { assetid: 2 },
+    where: { assetid: 10 },
     update: {
-      cid: 1,
-      assetName: 'Sierra Wind Energy Park',
-      name: 'Sierra Wind Energy Park',
+      cid: 2,
+      assetName: 'Mojave Solar Facility Alpha',
+      name: 'Mojave Solar Facility Alpha',
       isActive: true,
-      data: { assetName: 'Sierra Wind Energy Park', assetType: 'Wind', capacity: 85, region: 'WECC', cod: '2025-03-15' },
+      data: { assetName: 'Mojave Solar Facility Alpha', assetType: 'Solar', capacity: 250, region: 'PJM', cod: '2025-01-01' },
     },
     create: {
-      assetid: 2,
-      cid: 1,
-      assetName: 'Sierra Wind Energy Park',
-      name: 'Sierra Wind Energy Park',
+      assetid: 10,
+      cid: 2,
+      assetName: 'Mojave Solar Facility Alpha',
+      name: 'Mojave Solar Facility Alpha',
       isActive: true,
-      data: { assetName: 'Sierra Wind Energy Park', assetType: 'Wind', capacity: 85, region: 'WECC', cod: '2025-03-15' },
+      data: { assetName: 'Mojave Solar Facility Alpha', assetType: 'Solar', capacity: 250, region: 'PJM', cod: '2025-01-01' },
     },
   });
 
-  // 4. ENTITIES (SCREEN 1)
+  // =========================================================================
+  // ALL 11 ENTITY SCREENS FOR COMPANY 1 (CID: 1)
+  // =========================================================================
+
+  // Screen 1: Entities
   await prisma.entity.upsert({
     where: { entityid: 1 },
     update: {
@@ -221,7 +345,7 @@ async function main() {
       entityName: 'Venus Power Trading LLC',
       name: 'Venus Power Trading LLC',
       isActive: true,
-      data: { entityName: 'Venus Power Trading LLC', entity_ID_type_cd: 'DUNS', entity_ID: 'DUNS-99201102' },
+      data: { entityName: 'Venus Power Trading LLC', entity_ID_type_cd: 'CID', entity_ID: 'C100001' },
     },
     create: {
       entityid: 1,
@@ -229,11 +353,11 @@ async function main() {
       entityName: 'Venus Power Trading LLC',
       name: 'Venus Power Trading LLC',
       isActive: true,
-      data: { entityName: 'Venus Power Trading LLC', entity_ID_type_cd: 'DUNS', entity_ID: 'DUNS-99201102' },
+      data: { entityName: 'Venus Power Trading LLC', entity_ID_type_cd: 'CID', entity_ID: 'C100001' },
     },
   });
 
-  // 5. MBR AUTHORIZATIONS (SCREEN 2)
+  // Screen 2: MBR Authorizations
   await prisma.mbrAuthorization.upsert({
     where: { mbrauthid: 1 },
     update: {
@@ -242,10 +366,14 @@ async function main() {
       data: {
         mbrauthid: 1,
         cid: 1,
-        tariff_affiliate_tariff_id: 'FERC-TAR-001',
-        docket_num: 'ER26-100-000',
-        order_date: '2026-01-15T00:00:00.000Z',
-        description: 'FERC market-based rate authorization order',
+        authorization_docket_number: 'ER26-100-000',
+        authorization_docket: 'ER26-100-000',
+        authorization_effective_date: '2026-01-15',
+        authorization_effective_date1: '2026-01-15',
+        cancellation_docket_number: 'ER24-050-000',
+        cancellation_effective_date: '2025-12-31',
+        record_type_cd: 'New',
+        reference_id: null,
       },
     },
     create: {
@@ -255,15 +383,19 @@ async function main() {
       data: {
         mbrauthid: 1,
         cid: 1,
-        tariff_affiliate_tariff_id: 'FERC-TAR-001',
-        docket_num: 'ER26-100-000',
-        order_date: '2026-01-15T00:00:00.000Z',
-        description: 'FERC market-based rate authorization order',
+        authorization_docket_number: 'ER26-100-000',
+        authorization_docket: 'ER26-100-000',
+        authorization_effective_date: '2026-01-15',
+        authorization_effective_date1: '2026-01-15',
+        cancellation_docket_number: 'ER24-050-000',
+        cancellation_effective_date: '2025-12-31',
+        record_type_cd: 'New',
+        reference_id: null,
       },
     },
   });
 
-  // 6. CATEGORY STATUS (SCREEN 3)
+  // Screen 3: Category Status
   await prisma.categoryStatus.upsert({
     where: { pid: 1 },
     update: {
@@ -272,11 +404,13 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        region: 'CAISO',
         region_cd: 'CAISO',
-        cat_status_desc: 'Category 1 Seller - CAISO',
+        region_desc: 'California ISO',
         cat_status_in_region_fk: 1,
-        cat_status_effective_date: '2026-01-01T00:00:00.000Z',
+        cat_status_in_region_desc: 'Category 1 Seller',
+        cat_status_effective_date: '2026-01-01',
+        cat_status_effective_date1: '2026-01-01',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -286,16 +420,18 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        region: 'CAISO',
         region_cd: 'CAISO',
-        cat_status_desc: 'Category 1 Seller - CAISO',
+        region_desc: 'California ISO',
         cat_status_in_region_fk: 1,
-        cat_status_effective_date: '2026-01-01T00:00:00.000Z',
+        cat_status_in_region_desc: 'Category 1 Seller',
+        cat_status_effective_date: '2026-01-01',
+        cat_status_effective_date1: '2026-01-01',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 7. MITIGATIONS (SCREEN 4)
+  // Screen 4: Mitigations
   await prisma.mitigation.upsert({
     where: { pid: 1 },
     update: {
@@ -304,9 +440,13 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        docket_num: 'ER26-150-000',
-        mitigation_desc: 'Market Power Mitigation Agreement & Cost-Based Rate Cap',
-        order_date: '2026-02-01T00:00:00.000Z',
+        balancing_Authority_cd: 'CAISO',
+        mitigation_narrative: 'Default Energy Bid Mitigation in CAISO Market',
+        mitigation_effective_date: '2026-01-01',
+        mitigation_effective_date1: '2026-01-01',
+        mitigation_end_date: '2030-12-31',
+        mitigation_end_date1: '2030-12-31',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -316,14 +456,18 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        docket_num: 'ER26-150-000',
-        mitigation_desc: 'Market Power Mitigation Agreement & Cost-Based Rate Cap',
-        order_date: '2026-02-01T00:00:00.000Z',
+        balancing_Authority_cd: 'CAISO',
+        mitigation_narrative: 'Default Energy Bid Mitigation in CAISO Market',
+        mitigation_effective_date: '2026-01-01',
+        mitigation_effective_date1: '2026-01-01',
+        mitigation_end_date: '2030-12-31',
+        mitigation_end_date1: '2030-12-31',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 8. SELF LIMITATIONS (SCREEN 5)
+  // Screen 5: Self Limitations
   await prisma.selfLimitation.upsert({
     where: { pid: 1 },
     update: {
@@ -332,9 +476,15 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        docket_num: 'ER26-200-000',
-        description: 'Self-imposed 250MW capacity limitation in SPP balancing authority',
-        effective_date: '2026-01-01T00:00:00.000Z',
+        region_cd: 'CAISO',
+        region_desc: 'California ISO',
+        balancing_Authority_cd: 'CAISO',
+        self_limit_effective_date: '2026-01-01',
+        self_limit_effective_date1: '2026-01-01',
+        self_limit_end_date: '2030-12-31',
+        self_limit_end_date1: '2030-12-31',
+        description: 'Voluntary power export limit in CAISO',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -344,14 +494,20 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        docket_num: 'ER26-200-000',
-        description: 'Self-imposed 250MW capacity limitation in SPP balancing authority',
-        effective_date: '2026-01-01T00:00:00.000Z',
+        region_cd: 'CAISO',
+        region_desc: 'California ISO',
+        balancing_Authority_cd: 'CAISO',
+        self_limit_effective_date: '2026-01-01',
+        self_limit_effective_date1: '2026-01-01',
+        self_limit_end_date: '2030-12-31',
+        self_limit_end_date1: '2030-12-31',
+        description: 'Voluntary power export limit in CAISO',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 9. OPERATING RESERVES (SCREEN 6)
+  // Screen 6: Operating Reserves
   await prisma.operatingReserve.upsert({
     where: { pid: 1 },
     update: {
@@ -360,8 +516,13 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        balancing_Authority_cd: 'CISO',
-        description: 'Spinning and supplemental reserve commitment under CAISO tariff',
+        balancing_Authority_cd: 'CAISO',
+        or_authorization_effective_date: '2026-01-01',
+        or_authorization_effective_date1: '2026-01-01',
+        or_authorization_end_date: '2030-12-31',
+        or_authorization_end_date1: '2030-12-31',
+        description: 'Spinning and Supplemental Operating Reserves (100MW)',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -371,13 +532,18 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        balancing_Authority_cd: 'CISO',
-        description: 'Spinning and supplemental reserve commitment under CAISO tariff',
+        balancing_Authority_cd: 'CAISO',
+        or_authorization_effective_date: '2026-01-01',
+        or_authorization_effective_date1: '2026-01-01',
+        or_authorization_end_date: '2030-12-31',
+        or_authorization_end_date1: '2030-12-31',
+        description: 'Spinning and Supplemental Operating Reserves (100MW)',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 10. ENTITY TO ENTITY (SCREEN 7)
+  // Screen 7: Entities to Entities
   await prisma.entityToEntity.upsert({
     where: { pid: 1 },
     update: {
@@ -386,9 +552,16 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        affiliate_name: 'Venus Power Trading LLC',
-        ownership_percentage: 100,
-        relationship_type: 'Wholly-Owned Subsidiary',
+        reportable_entity_ID_type_CD: 'CID',
+        reportable_entity_ID: 'C100002',
+        Blanket_Auth_Docket_Number: 'ER26-100-000',
+        Utility_ID_Type_CD: 'CID',
+        Utility_ID: 'C100001',
+        relationship_start_date: '2026-01-01',
+        relationship_start_date1: '2026-01-01',
+        relationship_end_date: '2030-12-31',
+        relationship_end_date1: '2030-12-31',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -398,14 +571,21 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        affiliate_name: 'Venus Power Trading LLC',
-        ownership_percentage: 100,
-        relationship_type: 'Wholly-Owned Subsidiary',
+        reportable_entity_ID_type_CD: 'CID',
+        reportable_entity_ID: 'C100002',
+        Blanket_Auth_Docket_Number: 'ER26-100-000',
+        Utility_ID_Type_CD: 'CID',
+        Utility_ID: 'C100001',
+        relationship_start_date: '2026-01-01',
+        relationship_start_date1: '2026-01-01',
+        relationship_end_date: '2030-12-31',
+        relationship_end_date1: '2030-12-31',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 11. ENTITY TO GEN ASSET (SCREEN 8)
+  // Screen 8: Entities to Generator Assets
   await prisma.entityToGeneratorAsset.upsert({
     where: { pid: 1 },
     update: {
@@ -414,9 +594,24 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        gen_asset_name: 'Desert Sunlight Solar Array',
-        capacity: 150,
-        interconnection: 'CAISO 230kV Substation',
+        generation_asset_type_id: 1,
+        gen_asset_type: 'Solar',
+        asset_code: '57822',
+        eia_plant_code: '57822',
+        eia_generator_id: 'GEN1',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100001',
+        relationship_type: 'Owner',
+        relationship_type_fk: 1,
+        relationship_start_date: '2026-01-01',
+        relationship_start_date1: '2026-01-01',
+        relationship_end_date: '2035-12-31',
+        relationship_end_date1: '2035-12-31',
+        physical_location_Balancing_Authority_cd: 'CAISO',
+        telemetered_location_Balancing_Authority_cd: 'CAISO',
+        amount: '150',
+        cap_rating_adjusted: '150',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -426,14 +621,29 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        gen_asset_name: 'Desert Sunlight Solar Array',
-        capacity: 150,
-        interconnection: 'CAISO 230kV Substation',
+        generation_asset_type_id: 1,
+        gen_asset_type: 'Solar',
+        asset_code: '57822',
+        eia_plant_code: '57822',
+        eia_generator_id: 'GEN1',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100001',
+        relationship_type: 'Owner',
+        relationship_type_fk: 1,
+        relationship_start_date: '2026-01-01',
+        relationship_start_date1: '2026-01-01',
+        relationship_end_date: '2035-12-31',
+        relationship_end_date1: '2035-12-31',
+        physical_location_Balancing_Authority_cd: 'CAISO',
+        telemetered_location_Balancing_Authority_cd: 'CAISO',
+        amount: '150',
+        cap_rating_adjusted: '150',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 12. ENTITY TO PPA (SCREEN 9)
+  // Screen 9: Entities to PPAs
   await prisma.entityToPpa.upsert({
     where: { pid: 1 },
     update: {
@@ -442,11 +652,20 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        ppa_contract_id: 'PPA-2026-CAISO-01',
-        megawatts: 100,
-        counterparty: 'Pacific Gas & Electric Company',
-        contract_start: '2026-01-01',
-        contract_end: '2036-12-31',
+        ppa_agreement_id: 'PPA-VENUS-2026-01',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100001',
+        counterparty_ID_type_CD: 'CID',
+        counterparty_ID: 'C999999',
+        start_date: '2026-01-01',
+        start_date1: '2026-01-01',
+        scheduled_end_date: '2036-12-31',
+        scheduled_end_date1: '2036-12-31',
+        source_balancing_authority_cd: 'CAISO',
+        sink_balancing_authority_cd: 'CAISO',
+        amount: '100',
+        amount_adjusted: '100',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -456,16 +675,25 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        ppa_contract_id: 'PPA-2026-CAISO-01',
-        megawatts: 100,
-        counterparty: 'Pacific Gas & Electric Company',
-        contract_start: '2026-01-01',
-        contract_end: '2036-12-31',
+        ppa_agreement_id: 'PPA-VENUS-2026-01',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100001',
+        counterparty_ID_type_CD: 'CID',
+        counterparty_ID: 'C999999',
+        start_date: '2026-01-01',
+        start_date1: '2026-01-01',
+        scheduled_end_date: '2036-12-31',
+        scheduled_end_date1: '2036-12-31',
+        source_balancing_authority_cd: 'CAISO',
+        sink_balancing_authority_cd: 'CAISO',
+        amount: '100',
+        amount_adjusted: '100',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 13. ENTITY TO VERTICAL ASSET (SCREEN 10)
+  // Screen 10: Entities to Vertical Assets
   await prisma.entityToVerticalAsset.upsert({
     where: { pid: 1 },
     update: {
@@ -474,8 +702,17 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        vertical_asset_name: 'Mojave Gas Lateral Pipeline',
-        asset_type: 'Natural Gas Transmission',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100001',
+        vertical_asset_description: 'Transmission Asset 500kV Interconnect',
+        vertical_asset_type_fk: 1,
+        balancing_Authority_cd: 'CAISO',
+        relationship_start_date: '2026-01-01',
+        relationship_start_date1: '2026-01-01',
+        relationship_end_date: '2036-12-31',
+        relationship_end_date1: '2036-12-31',
+        explanatory_notes: 'Interconnection transmission line serving solar array',
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -485,13 +722,22 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        vertical_asset_name: 'Mojave Gas Lateral Pipeline',
-        asset_type: 'Natural Gas Transmission',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100001',
+        vertical_asset_description: 'Transmission Asset 500kV Interconnect',
+        vertical_asset_type_fk: 1,
+        balancing_Authority_cd: 'CAISO',
+        relationship_start_date: '2026-01-01',
+        relationship_start_date1: '2026-01-01',
+        relationship_end_date: '2036-12-31',
+        relationship_end_date1: '2036-12-31',
+        explanatory_notes: 'Interconnection transmission line serving solar array',
+        record_type_cd: 'New',
       },
     },
   });
 
-  // 14. MARKET STUDIES (SCREEN 11)
+  // Screen 11: Market Studies (Indicative MSS & IPSS)
   await prisma.indicativeMarketScreenStudy.upsert({
     where: { pid: 1 },
     update: {
@@ -500,10 +746,14 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        study_name: 'CAISO Delivered Price Test 2026',
-        screen_type: 'Pivotal Supplier Analysis',
-        result: 'PASSED',
-        notes: 'Applicant passes both pivotal supplier and market share screens.',
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'CAISO',
+        study_area_balancing_authority: 'CAISO - California ISO',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -513,10 +763,14 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        study_name: 'CAISO Delivered Price Test 2026',
-        screen_type: 'Pivotal Supplier Analysis',
-        result: 'PASSED',
-        notes: 'Applicant passes both pivotal supplier and market share screens.',
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'CAISO',
+        study_area_balancing_authority: 'CAISO - California ISO',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
       },
     },
   });
@@ -529,9 +783,14 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        study_name: 'WECC Power Supply Assessment',
-        screen_type: 'Market Share Analysis',
-        result: 'PASSED',
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'CAISO',
+        study_area_balancing_authority: 'CAISO - California ISO',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
       },
     },
     create: {
@@ -541,11 +800,517 @@ async function main() {
       data: {
         pid: 1,
         cid: 1,
-        study_name: 'WECC Power Supply Assessment',
-        screen_type: 'Market Share Analysis',
-        result: 'PASSED',
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'CAISO',
+        study_area_balancing_authority: 'CAISO - California ISO',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
       },
     },
+  });
+
+  // Parameters for IMSS 1
+  await prisma.imssParameter.deleteMany({ where: { imssId: 1 } });
+  await prisma.imssParameter.createMany({
+    data: [
+      { cid: 1, imssId: 1, data: { study_parameter: 1, study_param: 'Peak Demand (MW)', study_parameter_value: 45000, study_parameter_reference: 1, season: 'Summer' } },
+      { cid: 1, imssId: 1, data: { study_parameter: 2, study_param: 'Installed Capacity (MW)', study_parameter_value: 52000, study_parameter_reference: 1, season: 'Summer' } },
+      { cid: 1, imssId: 1, data: { study_parameter: 3, study_param: 'Uncommitted Capacity (MW)', study_parameter_value: 8000, study_parameter_reference: 1, season: 'Summer' } },
+      { cid: 1, imssId: 1, data: { study_parameter: 4, study_param: 'Market Share (%)', study_parameter_value: 12, study_parameter_reference: 1, season: 'Summer' } },
+    ],
+  });
+
+  // =========================================================================
+  // ALL 11 ENTITY SCREENS FOR COMPANY 2 (CID: 2) - ForgeByte Solar Ventures LLC
+  // =========================================================================
+
+  // Screen 1: Entities
+  await prisma.entity.upsert({
+    where: { entityid: 10 },
+    update: {
+      cid: 2,
+      entityName: 'ForgeByte Renewable Holdings LLC',
+      name: 'ForgeByte Renewable Holdings LLC',
+      isActive: true,
+      data: { entityName: 'ForgeByte Renewable Holdings LLC', entity_ID_type_cd: 'CID', entity_ID: 'C100002' },
+    },
+    create: {
+      entityid: 10,
+      cid: 2,
+      entityName: 'ForgeByte Renewable Holdings LLC',
+      name: 'ForgeByte Renewable Holdings LLC',
+      isActive: true,
+      data: { entityName: 'ForgeByte Renewable Holdings LLC', entity_ID_type_cd: 'CID', entity_ID: 'C100002' },
+    },
+  });
+
+  // Screen 2: MBR Authorizations
+  await prisma.mbrAuthorization.upsert({
+    where: { mbrauthid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        mbrauthid: 10,
+        cid: 2,
+        authorization_docket_number: 'ER26-200-000',
+        authorization_docket: 'ER26-200-000',
+        authorization_effective_date: '2026-02-01',
+        authorization_effective_date1: '2026-02-01',
+        cancellation_docket_number: 'ER23-010-000',
+        cancellation_effective_date: '2025-11-30',
+        record_type_cd: 'New',
+        reference_id: null,
+      },
+    },
+    create: {
+      mbrauthid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        mbrauthid: 10,
+        cid: 2,
+        authorization_docket_number: 'ER26-200-000',
+        authorization_docket: 'ER26-200-000',
+        authorization_effective_date: '2026-02-01',
+        authorization_effective_date1: '2026-02-01',
+        cancellation_docket_number: 'ER23-010-000',
+        cancellation_effective_date: '2025-11-30',
+        record_type_cd: 'New',
+        reference_id: null,
+      },
+    },
+  });
+
+  // Screen 3: Category Status
+  await prisma.categoryStatus.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        region_cd: 'PJM',
+        region_desc: 'PJM Interconnection',
+        cat_status_in_region_fk: 1,
+        cat_status_in_region_desc: 'Category 1 Seller',
+        cat_status_effective_date: '2026-02-01',
+        cat_status_effective_date1: '2026-02-01',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        region_cd: 'PJM',
+        region_desc: 'PJM Interconnection',
+        cat_status_in_region_fk: 1,
+        cat_status_in_region_desc: 'Category 1 Seller',
+        cat_status_effective_date: '2026-02-01',
+        cat_status_effective_date1: '2026-02-01',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 4: Mitigations
+  await prisma.mitigation.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        balancing_Authority_cd: 'PJM',
+        mitigation_narrative: 'Default Energy Bid & Conduct Threshold Mitigation in PJM',
+        mitigation_effective_date: '2026-02-01',
+        mitigation_effective_date1: '2026-02-01',
+        mitigation_end_date: '2031-12-31',
+        mitigation_end_date1: '2031-12-31',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        balancing_Authority_cd: 'PJM',
+        mitigation_narrative: 'Default Energy Bid & Conduct Threshold Mitigation in PJM',
+        mitigation_effective_date: '2026-02-01',
+        mitigation_effective_date1: '2026-02-01',
+        mitigation_end_date: '2031-12-31',
+        mitigation_end_date1: '2031-12-31',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 5: Self Limitations
+  await prisma.selfLimitation.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        region_cd: 'PJM',
+        region_desc: 'PJM Interconnection',
+        balancing_Authority_cd: 'PJM',
+        self_limit_effective_date: '2026-02-01',
+        self_limit_effective_date1: '2026-02-01',
+        self_limit_end_date: '2031-12-31',
+        self_limit_end_date1: '2031-12-31',
+        description: 'Voluntary power export limit in PJM Interconnection',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        region_cd: 'PJM',
+        region_desc: 'PJM Interconnection',
+        balancing_Authority_cd: 'PJM',
+        self_limit_effective_date: '2026-02-01',
+        self_limit_effective_date1: '2026-02-01',
+        self_limit_end_date: '2031-12-31',
+        self_limit_end_date1: '2031-12-31',
+        description: 'Voluntary power export limit in PJM Interconnection',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 6: Operating Reserves
+  await prisma.operatingReserve.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        balancing_Authority_cd: 'PJM',
+        or_authorization_effective_date: '2026-02-01',
+        or_authorization_effective_date1: '2026-02-01',
+        or_authorization_end_date: '2031-12-31',
+        or_authorization_end_date1: '2031-12-31',
+        description: 'Spinning Reserve Authorization (50MW)',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        balancing_Authority_cd: 'PJM',
+        or_authorization_effective_date: '2026-02-01',
+        or_authorization_effective_date1: '2026-02-01',
+        or_authorization_end_date: '2031-12-31',
+        or_authorization_end_date1: '2031-12-31',
+        description: 'Spinning Reserve Authorization (50MW)',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 7: Entities to Entities
+  await prisma.entityToEntity.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        reportable_entity_ID_type_CD: 'CID',
+        reportable_entity_ID: 'C100001',
+        Blanket_Auth_Docket_Number: 'ER26-200-000',
+        Utility_ID_Type_CD: 'CID',
+        Utility_ID: 'C100002',
+        relationship_start_date: '2026-02-01',
+        relationship_start_date1: '2026-02-01',
+        relationship_end_date: '2031-12-31',
+        relationship_end_date1: '2031-12-31',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        reportable_entity_ID_type_CD: 'CID',
+        reportable_entity_ID: 'C100001',
+        Blanket_Auth_Docket_Number: 'ER26-200-000',
+        Utility_ID_Type_CD: 'CID',
+        Utility_ID: 'C100002',
+        relationship_start_date: '2026-02-01',
+        relationship_start_date1: '2026-02-01',
+        relationship_end_date: '2031-12-31',
+        relationship_end_date1: '2031-12-31',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 8: Entities to Generator Assets
+  await prisma.entityToGeneratorAsset.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        generation_asset_type_id: 1,
+        gen_asset_type: 'Solar',
+        asset_code: '58901',
+        eia_plant_code: '58901',
+        eia_generator_id: 'SOL1',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100002',
+        relationship_type: 'Owner',
+        relationship_type_fk: 1,
+        relationship_start_date: '2026-02-01',
+        relationship_start_date1: '2026-02-01',
+        relationship_end_date: '2036-12-31',
+        relationship_end_date1: '2036-12-31',
+        physical_location_Balancing_Authority_cd: 'PJM',
+        telemetered_location_Balancing_Authority_cd: 'PJM',
+        amount: '250',
+        cap_rating_adjusted: '250',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        generation_asset_type_id: 1,
+        gen_asset_type: 'Solar',
+        asset_code: '58901',
+        eia_plant_code: '58901',
+        eia_generator_id: 'SOL1',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100002',
+        relationship_type: 'Owner',
+        relationship_type_fk: 1,
+        relationship_start_date: '2026-02-01',
+        relationship_start_date1: '2026-02-01',
+        relationship_end_date: '2036-12-31',
+        relationship_end_date1: '2036-12-31',
+        physical_location_Balancing_Authority_cd: 'PJM',
+        telemetered_location_Balancing_Authority_cd: 'PJM',
+        amount: '250',
+        cap_rating_adjusted: '250',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 9: Entities to PPAs
+  await prisma.entityToPpa.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        ppa_agreement_id: 'PPA-FORGE-2026-01',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100002',
+        counterparty_ID_type_CD: 'CID',
+        counterparty_ID: 'C888888',
+        start_date: '2026-02-01',
+        start_date1: '2026-02-01',
+        scheduled_end_date: '2037-12-31',
+        scheduled_end_date1: '2037-12-31',
+        source_balancing_authority_cd: 'PJM',
+        sink_balancing_authority_cd: 'PJM',
+        amount: '80',
+        amount_adjusted: '80',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        ppa_agreement_id: 'PPA-FORGE-2026-01',
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100002',
+        counterparty_ID_type_CD: 'CID',
+        counterparty_ID: 'C888888',
+        start_date: '2026-02-01',
+        start_date1: '2026-02-01',
+        scheduled_end_date: '2037-12-31',
+        scheduled_end_date1: '2037-12-31',
+        source_balancing_authority_cd: 'PJM',
+        sink_balancing_authority_cd: 'PJM',
+        amount: '80',
+        amount_adjusted: '80',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 10: Entities to Vertical Assets
+  await prisma.entityToVerticalAsset.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100002',
+        vertical_asset_description: 'Mojave Substation 230kV Interconnect',
+        vertical_asset_type_fk: 1,
+        balancing_Authority_cd: 'PJM',
+        relationship_start_date: '2026-02-01',
+        relationship_start_date1: '2026-02-01',
+        relationship_end_date: '2037-12-31',
+        relationship_end_date1: '2037-12-31',
+        explanatory_notes: 'High-voltage substation step-up transformer facility',
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        entity_ID_type_CD: 'CID',
+        entity_ID: 'C100002',
+        vertical_asset_description: 'Mojave Substation 230kV Interconnect',
+        vertical_asset_type_fk: 1,
+        balancing_Authority_cd: 'PJM',
+        relationship_start_date: '2026-02-01',
+        relationship_start_date1: '2026-02-01',
+        relationship_end_date: '2037-12-31',
+        relationship_end_date1: '2037-12-31',
+        explanatory_notes: 'High-voltage substation step-up transformer facility',
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Screen 11: Market Studies (Indicative MSS & IPSS)
+  await prisma.indicativeMarketScreenStudy.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'PJM',
+        study_area_balancing_authority: 'PJM - PJM Interconnection',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'PJM',
+        study_area_balancing_authority: 'PJM - PJM Interconnection',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  await prisma.indicativePowerSupplyStudy.upsert({
+    where: { pid: 10 },
+    update: {
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'PJM',
+        study_area_balancing_authority: 'PJM - PJM Interconnection',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
+      },
+    },
+    create: {
+      pid: 10,
+      cid: 2,
+      isActive: true,
+      data: {
+        pid: 10,
+        cid: 2,
+        study_type_cd: 'New',
+        study_end_year: '2026',
+        study_area_balancing_authority_cd: 'PJM',
+        study_area_balancing_authority: 'PJM - PJM Interconnection',
+        scenario_type: 'Base Case',
+        scenario_type_desc: 'Base Case',
+        study_parameters_count: 4,
+        record_type_cd: 'New',
+      },
+    },
+  });
+
+  // Parameters for IMSS 10
+  await prisma.imssParameter.deleteMany({ where: { imssId: 10 } });
+  await prisma.imssParameter.createMany({
+    data: [
+      { cid: 2, imssId: 10, data: { study_parameter: 1, study_param: 'Peak Demand (MW)', study_parameter_value: 38000, study_parameter_reference: 1, season: 'Summer' } },
+      { cid: 2, imssId: 10, data: { study_parameter: 2, study_param: 'Installed Capacity (MW)', study_parameter_value: 46000, study_parameter_reference: 1, season: 'Summer' } },
+      { cid: 2, imssId: 10, data: { study_parameter: 3, study_param: 'Uncommitted Capacity (MW)', study_parameter_value: 6500, study_parameter_reference: 1, season: 'Summer' } },
+      { cid: 2, imssId: 10, data: { study_parameter: 4, study_param: 'Market Share (%)', study_parameter_value: 9, study_parameter_reference: 1, season: 'Summer' } },
+    ],
   });
 
   // 15. FILINGS
@@ -578,6 +1343,39 @@ async function main() {
         filingType: 'Baseline MBR Filing',
         status: 'Ready For Submission',
         description: 'Comprehensive 2026 Market-Based Rate Baseline Filing',
+      },
+    },
+  });
+
+  await prisma.filing.upsert({
+    where: { fid: 10 },
+    update: {
+      cid: 2,
+      uid: 10,
+      status: 'Ready For Submission',
+      isActive: true,
+      data: {
+        fid: 10,
+        cid: 2,
+        docketNumber: 'ER26-200-000',
+        filingType: 'Triennial MBR Update',
+        status: 'Ready For Submission',
+        description: 'ForgeByte Solar Triennial Market-Based Rate Filing',
+      },
+    },
+    create: {
+      fid: 10,
+      cid: 2,
+      uid: 10,
+      status: 'Ready For Submission',
+      isActive: true,
+      data: {
+        fid: 10,
+        cid: 2,
+        docketNumber: 'ER26-200-000',
+        filingType: 'Triennial MBR Update',
+        status: 'Ready For Submission',
+        description: 'ForgeByte Solar Triennial Market-Based Rate Filing',
       },
     },
   });
@@ -618,7 +1416,42 @@ async function main() {
     },
   });
 
-  console.log('--- ALL CLEAN DEMO DATA SUCCESSFULLY SEEDED INTO POSTGRES ---');
+  await prisma.invoice.upsert({
+    where: { invoiceId: 10 },
+    update: {
+      cid: 2,
+      aid: 1,
+      agid: 1,
+      isSent: true,
+      isBilled: true,
+      isPaid: true,
+      isActive: true,
+      data: {
+        invoiceId: 10,
+        invoiceNumber: 'FORGE-INV-2026-001',
+        amount: 4500,
+        status: 'Paid',
+      },
+    },
+    create: {
+      invoiceId: 10,
+      cid: 2,
+      aid: 1,
+      agid: 1,
+      isSent: true,
+      isBilled: true,
+      isPaid: true,
+      isActive: true,
+      data: {
+        invoiceId: 10,
+        invoiceNumber: 'FORGE-INV-2026-001',
+        amount: 4500,
+        status: 'Paid',
+      },
+    },
+  });
+
+  console.log('--- ALL 11 SCREENS AND DATA FOR BOTH COMPANIES SEEDED SUCCESSFULLY ---');
 }
 
 main()

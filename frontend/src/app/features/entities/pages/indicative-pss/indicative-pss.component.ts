@@ -696,12 +696,25 @@ export class IndicativePssComponent implements OnInit {
 
   onEdit(item: any) {
     const r = item.raw ?? item;
+
+    // Normalize scenarioType to '1' or '2' for the select binding
+    let st = String(r.scenario_type ?? r.study_scenario_type_fk ?? '').trim();
+    if (st.toLowerCase().includes('base') || st === '1') {
+      st = '1';
+    } else if (st.toLowerCase().includes('sensit') || st === '2') {
+      st = '2';
+    } else {
+      st = '1';
+    }
+
+    const ba = r.study_area_balancing_authority_cd || r.study_area_balancing_authority_fk || r.balancing_Authority_cd || (r.study_area_balancing_authority ? String(r.study_area_balancing_authority).split(' ')[0] : '');
+
     this.formData = {
-      studyTypeCd: r.study_type_cd ?? '',
-      previousStudyRefId: '',
-      studyEndYear: r.study_end_year ?? '',
-      studyAreaBalancingAuthorityCd: r.study_area_balancing_authority_cd ?? '',
-      scenarioType: r.scenario_type ?? '',
+      studyTypeCd: r.study_type_cd ?? (r.study_type_fk === 2 ? 'Update' : 'New'),
+      previousStudyRefId: r.study_amended_reference_fk ? String(r.study_amended_reference_fk) : '',
+      studyEndYear: String(r.study_end_year ?? ''),
+      studyAreaBalancingAuthorityCd: ba,
+      scenarioType: st,
       recordType: r.record_type_cd ?? 'New'
     };
     this.editingPid = r.pid ?? 0;

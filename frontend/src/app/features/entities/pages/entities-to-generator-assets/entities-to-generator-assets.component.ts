@@ -1122,7 +1122,23 @@ export class EntitiesToGeneratorAssetsComponent implements OnInit, OnDestroy {
     const d = dateObj.getDate().toString().padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
-  async onDelete(item: any) { if (await this.confirmService.show('Delete this record?', 'Confirm Delete', 'Delete', 'Cancel')) { this.loadData(); } }
+  async onDelete(item: any) {
+    if (await this.confirmService.show('Delete this record?', 'Confirm Delete', 'Delete', 'Cancel')) {
+      const r = item.raw ?? item;
+      const pid = r.pid ?? 0;
+      const gid = r.entities_genassets_id ?? r.recordId ?? 0;
+      this.apiService.deleteEtoGenByID(pid, gid).subscribe({
+        next: () => {
+          this.toast.success('Record deleted.');
+          this.loadData();
+        },
+        error: (e: any) => {
+          console.error(e);
+          this.toast.error('Delete failed');
+        }
+      });
+    }
+  }
   toggleAll(e: Event) {
     const checked = (e.target as HTMLInputElement).checked;
     this.data.forEach(x => x.selected = checked);

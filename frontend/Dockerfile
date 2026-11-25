@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 nginx:alpine
+FROM nginx:alpine
 
 LABEL application="venu-tech-frontend"
 LABEL description="Venu Tech eTariff Angular Frontend"

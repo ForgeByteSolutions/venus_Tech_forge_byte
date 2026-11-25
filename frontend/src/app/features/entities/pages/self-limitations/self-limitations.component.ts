@@ -153,12 +153,7 @@ import { DateFormatterService } from '../../../../core/services/date-formatter.s
                      <div class="select-wrapper">
                        <select class="form-input" [class.error]="formErrors.region" [(ngModel)]="formData.region" (input)="formErrors.region = ''" name="region">
                          <option value="">--Select--</option>
-                         <option value="CE">Central</option>
-                         <option value="NE">Northeast</option>
-                         <option value="NW">Northwest</option>
-                         <option value="SE">Southeast</option>
-                         <option value="SPP">Southwest Power Pool</option>
-                         <option value="SW">Southwest</option>
+                         <option *ngFor="let reg of (regions.length > 0 ? regions : defaultRegions)" [value]="reg.region_cd || reg.value || reg.id">{{ reg.region_nm || reg.text || reg.region_desc || reg.region_cd }}</option>
                        </select>
                      </div>
                      <small class="error-text" *ngIf="formErrors.region">{{ formErrors.region }}</small>
@@ -313,6 +308,14 @@ export class SelfLimitationsComponent implements OnInit {
   editingSelfLimitId: number | null = null;
   editingPid: number | null = null;
   regions: any[] = [];
+  defaultRegions = [
+    { value: 'CE', text: 'Central', region_cd: 'CE', region_nm: 'Central' },
+    { value: 'NE', text: 'Northeast', region_cd: 'NE', region_nm: 'Northeast' },
+    { value: 'NW', text: 'Northwest', region_cd: 'NW', region_nm: 'Northwest' },
+    { value: 'SE', text: 'Southeast', region_cd: 'SE', region_nm: 'Southeast' },
+    { value: 'SPP', text: 'Southwest Power Pool', region_cd: 'SPP', region_nm: 'Southwest Power Pool' },
+    { value: 'SW', text: 'Southwest', region_cd: 'SW', region_nm: 'Southwest' }
+  ];
   balancingAuthorities: any[] = [];
   companies: any[] = [];
   currentCompanyName: string = 'Loading...';
@@ -640,12 +643,27 @@ export class SelfLimitationsComponent implements OnInit {
   onEdit(item: any) {
     const r = item.raw ?? item;
     
+    const parseDate = (d: any) => {
+      if (!d) return '';
+      const s = String(d);
+      if (s.includes('T')) return s.split('T')[0];
+      if (s.includes('/')) {
+        const parts = s.split('/');
+        if (parts.length === 3) return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+      }
+      return s.substring(0, 10);
+    };
+
+    const refId = r.reference_id ?? r.mbr_self_limitations_id ?? r.pid ?? '';
+    const recType = r.record_type_cd ?? 'Update';
+
     this.formData = {
-      region: r.region_cd ?? '',
-      balancingAuthority: r.balancing_Authority_cd ?? r.baa_desc ?? '',
-      effectiveDate: (r.self_limit_effective_date || r.self_limit_effective_date1 || r.active_date || '').toString().substring(0, 10) || '',
-      endDate: (r.self_limit_end_date || r.self_limit_end_date1 || r.inactive_date || '').toString().substring(0, 10) || '',
-      recordType: r.record_type_cd ?? 'Update'
+      region: r.region_cd ?? r.region_desc ?? '',
+      balancingAuthority: r.balancing_Authority_cd ?? r.Balancing_Authority_cd ?? r.baa_desc ?? '',
+      effectiveDate: parseDate(r.self_limit_effective_date || r.self_limit_effective_date1 || r.active_date),
+      endDate: parseDate(r.self_limit_end_date || r.self_limit_end_date1 || r.inactive_date),
+      recordType: recType,
+      referenceId: recType === 'Update' ? String(refId) : ''
     };
     this.editingSelfLimitId = r.mbr_self_limitations_id ?? r.mbr_self_limitations_id_fk ?? null;
     this.editingPid = r.pid ?? null;

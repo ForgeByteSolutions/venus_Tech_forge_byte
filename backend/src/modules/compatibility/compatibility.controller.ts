@@ -730,14 +730,24 @@ export class CompatibilityController {
 
   private async handleAccountPost(action: string, body: AnyRecord, params: AnyRecord, query: AnyRecord) {
     if (action === 'insupdgroups') return this.saveAccountGroup(body);
-    if (action === 'createaccount' || action === 'updateaccount' || action === 'updateaccountdetails') {
+    if (action === 'createaccount' || action === 'updateaccount' || action === 'updateaccountdetails' || action === 'saveaccount') {
       return this.saveAccount(body, query);
+    }
+    if (action === 'admindeleteaccount' || action === 'deleteaccount') {
+      const aidVal = this.numberValue(body.aid || body.id || params.p1);
+      if (aidVal) {
+        await this.prisma.account.updateMany({
+          where: { aid: aidVal },
+          data: { isActive: false },
+        });
+        return { success: true, message: 'Account deleted successfully', resultId: aidVal, ResultId: aidVal, aid: aidVal };
+      }
     }
     return { success: false, message: `Unsupported account action: ${action}`, data: body ?? {} };
   }
 
   private async handleCompanyGet(action: string, params: AnyRecord) {
-    if (action === 'getcompanylistbyaid' || action === 'admingetcompaniesbyaid') {
+    if (action === 'getcompanylistbyaid' || action === 'admingetcompaniesbyaid' || action === 'getcompaniesbyaccount') {
       return this.listCompanies({ aid: this.numberValue(params.p1), activeOnly: action === 'getcompanylistbyaid' });
     }
     if (action === 'getcompanylistbycid') return this.listCompanies({ cid: this.numberValue(params.p1), activeOnly: true });
@@ -748,11 +758,21 @@ export class CompatibilityController {
   }
 
   private async handleCompanyPost(action: string, body: AnyRecord, params: AnyRecord, query: AnyRecord) {
-    if (action === 'createcompany' || action === 'updatecompany' || action === 'updatecompanydetails') {
+    if (action === 'createcompany' || action === 'updatecompany' || action === 'updatecompanydetails' || action === 'savecompany') {
       return this.saveCompany(body, params, query);
     }
     if (action === 'updatefilingflags') return this.updateCompanyFilingFlags(body, query);
     if (action === 'copyentitydata') return this.copyEntityData(body);
+    if (action === 'admindeletecompany' || action === 'deletecompany') {
+      const cidVal = this.numberValue(body.cid || body.id || params.p1);
+      if (cidVal) {
+        await this.prisma.company.updateMany({
+          where: { cid: cidVal },
+          data: { isActive: false },
+        });
+        return { success: true, message: 'Company deleted successfully', resultId: cidVal, ResultId: cidVal, cid: cidVal };
+      }
+    }
     return { success: false, message: `Unsupported company action: ${action}`, data: body ?? {} };
   }
 
@@ -1133,6 +1153,20 @@ export class CompatibilityController {
 
     if (this.isCreateAction(action) || this.isSaveAction(action) || action.startsWith('insupd')) {
       return this.saveModelRecord(modelName, body, params, query);
+    }
+
+    if (action.includes('delete') || action.startsWith('del')) {
+      const idField = this.idFieldForModel(modelName);
+      const idVal = this.resolveIdValue(modelName, body, params, query);
+      if (idVal) {
+        const client = (this.prisma as AnyRecord)[modelName];
+        if (client?.updateMany) {
+          await client.updateMany({ where: { [idField]: idVal }, data: { isActive: false } });
+        } else if (client?.deleteMany) {
+          await client.deleteMany({ where: { [idField]: idVal } });
+        }
+        return { success: true, message: `${modelName} deleted successfully`, resultId: idVal, ResultId: idVal, [idField]: idVal };
+      }
     }
 
     if (this.isCopyAction(action)) {
@@ -2313,14 +2347,14 @@ export class CompatibilityController {
   }
 
   private buildModelData(modelName: string, body: AnyRecord, params: AnyRecord, query: AnyRecord) {
-    const cid = this.numberValue(body.cid || body.Cid || query.cid || params.p1);
+    const cid = this.numberValue(body.cid || body.Cid || body.CID || query.cid || params.p1) || 1;
     const aid = this.numberValue(body.aid || body.Aid || query.aid);
     const gid = this.numberValue(body.gid || body.Gid || query.gid);
     const idField = this.idFieldForModel(modelName);
     const persistedData = this.cleanDataForPersist(body);
     const isActive = body.isActive === undefined ? true : this.booleanValue(body.isActive, true);
     let data: AnyRecord = {
-      cid: cid || undefined,
+      cid: cid || 1,
       aid: aid || undefined,
       gid: gid || undefined,
       isActive,

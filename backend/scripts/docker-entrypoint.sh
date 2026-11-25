@@ -9,6 +9,7 @@ if [ -n "$DATABASE_URL" ]; then
   npx prisma db push --schema=src/prisma/schema.prisma
   echo "Seeding runtime data..."
   node scripts/prisma-seed-runtime.js || true
+  node scripts/populate-demo-e2e.js || true
 fi
 
 echo "Launching NestJS application on port ${PORT:-3000}..."

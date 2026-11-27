@@ -196,15 +196,17 @@ For hosting this application on AWS, the most cost-effective and simplest servic
 
 ---
 
-## 8. Default Login Credentials
+## 8. User Roles & Accounts
 
-| Role Name | User Name | Email Address | Password |
+| Role Name | User Name | Email Address | Access Level |
 |:---|:---|:---|:---|
-| **Site Admin (Super User)** | Guna Sekhar (Admin) | `puttugunasekhar@forgebyte.ai` | `Latha@2004` |
-| **Account Admin** | Guna Sekhar | `puttuguna@gmail.com` | `Latha@2004` |
-| **Company User (Company 1)** | Guna User | `guna@gmail.com` | `Latha@2004` |
-| **Company User (Company 2)** | Preetham Kantubhukta | `preetham@forgebyte.ai` | `Latha@2004` |
-| **Read Only User (Auditor)** | Internal Auditor | `audit@forgebyte.ai` | `Latha@2004` |
+| **Site Admin (Super User)** | Guna Sekhar (Admin) | `puttugunasekhar@forgebyte.ai` | Global administrative access across all accounts |
+| **Account Admin** | Guna Sekhar | `puttuguna@gmail.com` | Holding account management & company administration |
+| **Company User (Company 1)** | Guna User | `guna@gmail.com` | Operational regulatory filings for Venus Clean Energy |
+| **Company User (Company 2)** | Preetham Kantubhukta | `preetham@forgebyte.ai` | Operational regulatory filings for ForgeByte Solar |
+| **Read Only User (Auditor)** | Internal Auditor | `audit@forgebyte.ai` | Read-only audit access across all screens |
+
+> **Security Notice**: Passwords have been omitted from documentation for security compliance. Refer to your internal team secrets vault or secure password manager for initial environment credentials.
 
 ---
 

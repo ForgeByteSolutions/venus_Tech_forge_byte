@@ -19,16 +19,7 @@ export class MBRIndicativeMssValidator {
   }
 
   static getStudyAmendedReferenceError(refId: string, studyType: string): string | null {
-    
-    if (studyType === 'Update') {
-      if (!refId || refId.trim() === '') {
-        return 'Study Amended Reference is required for Update records';
-      }
-      const parsedId = parseInt(refId, 10);
-      if (isNaN(parsedId) || parsedId <= 0) {
-        return 'Study Amended Reference must be a valid positive number';
-      }
-    }
+    // Ignored / Optional - previous study amended reference is not mandatory
     return null;
   }
 
@@ -40,21 +31,12 @@ export class MBRIndicativeMssValidator {
     if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
       return 'Study End Year must be a valid year (1900-2100)';
     }
-    
-    const currentYear = new Date().getFullYear();
-    if (yearNum > currentYear) {
-      return `Study End Year must be a current or historical year (not future: ${yearNum})`;
-    }
     return null;
   }
 
   static getStudyAreaBalancingAuthorityError(ba: string): string | null {
     if (!ba || ba.trim() === '') {
       return 'Study Area Balancing Authority is required';
-    }
-    
-    if (ba.trim().length > 5) {
-      return 'Invalid Balancing Authority Code format';
     }
     return null;
   }
@@ -71,7 +53,7 @@ export class MBRIndicativeMssValidator {
 
   static getSeasonError(season: string): string | null {
     if (!season || season.trim() === '') {
-      return 'Season is required';
+      return null;
     }
     if (!this.SEASON_OPTIONS.includes(season)) {
       return 'Season must be one of: 1-Winter, 2-Spring, 3-Summer, 4-Fall';

@@ -36,3 +36,11 @@ Thumbs.db
 *.swo
 
 *.tsbuildinfo
+
+# Internal Handover Documentation & Test Files
+DEVELOPER_HANDOVER_GUIDE.md
+AWS_DEPLOYMENT_RECOMMENDATION.md
+*.xlsx
+backend/scripts/activate_all_companies.js
+backend/scripts/purge_to_one_record.js
+

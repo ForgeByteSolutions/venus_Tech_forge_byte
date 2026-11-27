@@ -194,7 +194,6 @@ For hosting this application on AWS, the most cost-effective and simplest servic
 4. **Access Application**:
    Open browser at `http://<YOUR_SERVER_IP>:4200`
 
-
 ---
 
 ## 8. Default Login Credentials
@@ -209,53 +208,10 @@ For hosting this application on AWS, the most cost-effective and simplest servic
 
 ---
 
-## 9. Specialized Handover Documentation
+## 9. Specialized Handover Documentation & Test Artifacts
 
 - [DEVELOPER_HANDOVER_GUIDE.md](file:///c:/Users/gunasekhar.p/Music/venus_Tech_forge_byte/DEVELOPER_HANDOVER_GUIDE.md): Complete architecture, schema mapping, multi-company context, local development workflow, and developer guide.
 - [AWS_DEPLOYMENT_RECOMMENDATION.md](file:///c:/Users/gunasekhar.p/Music/venus_Tech_forge_byte/AWS_DEPLOYMENT_RECOMMENDATION.md): Dedicated AWS Lightsail $5/mo deployment guide with step-by-step instructions, firewall rules, and ready-to-send DevOps handover note.
+- [MBR_COMPLIANCE_PORTAL_FULL_PROJECT_TEST_CASES.xlsx](file:///c:/Users/gunasekhar.p/Music/venus_Tech_forge_byte/MBR_COMPLIANCE_PORTAL_FULL_PROJECT_TEST_CASES.xlsx): **Comprehensive Excel Test Suite Workbook** with 5 interactive sheets covering all test types (Functional, Negative, Boundary, Security/RBAC, Multi-Tenant, FERC 11 screens, and formal QA Sign-off).
 
----
-
-## 7. Cloud Deployment Suggestion (Cheapest Option)
-
-For hosting this application on AWS, the most cost-effective and simplest service is **AWS Lightsail**.
-
-### Why AWS Lightsail?
-- **Flat Cost**: Only **$5.00 to $10.00 / month** (Includes CPU, 2 GB RAM, 60 GB SSD storage, static IP, and 3 TB data transfer).
-- **Free Trial**: **First 3 months are completely free** for new AWS accounts.
-- **Zero Surprises**: No unpredictable cloud bills for bandwidth or IP addresses.
-- **Runs Docker Directly**: Uses the exact same `docker-compose.yml` with zero code modifications.
-
-### 4 Quick Steps for the Deployment Team
-
-1. **Create Instance**: In AWS Console &rarr; Lightsail &rarr; Create Instance &rarr; Choose **Ubuntu 22.04 LTS** &rarr; Select the **$5/mo or $10/mo** plan.
-2. **Open Firewall Ports**: In Lightsail instance settings &rarr; Networking &rarr; Open **Port 80**, **Port 443**, and **Port 4200**.
-3. **Run Setup on Server**:
-   ```bash
-   sudo apt update && sudo apt install -y docker.io docker-compose
-   git clone <YOUR_GIT_REPO_URL>
-   cd venus_Tech_forge_byte
-   docker-compose up -d --build
-   ```
-4. **Access Application**:
-   Open browser at `http://<YOUR_SERVER_IP>:4200`
-
-
----
-
-## 8. Default Login Credentials
-
-| Role Name | User Name | Email Address | Password |
-|:---|:---|:---|:---|
-| **Site Admin (Super User)** | Guna Sekhar (Admin) | `puttugunasekhar@forgebyte.ai` | `Latha@2004` |
-| **Account Admin** | Guna Sekhar | `puttuguna@gmail.com` | `Latha@2004` |
-| **Company User (Company 1)** | Guna User | `guna@gmail.com` | `Latha@2004` |
-| **Company User (Company 2)** | Preetham Kantubhukta | `preetham@forgebyte.ai` | `Latha@2004` |
-| **Read Only User (Auditor)** | Internal Auditor | `audit@forgebyte.ai` | `Latha@2004` |
-
----
-
-## 9. Specialized Handover Documentation
-
-- [DEVELOPER_HANDOVER_GUIDE.md](file:///c:/Users/gunasekhar.p/Music/venus_Tech_forge_byte/DEVELOPER_HANDOVER_GUIDE.md): Complete architecture, schema mapping, multi-company context, local development workflow, and developer guide.
-- [AWS_DEPLOYMENT_RECOMMENDATION.md](file:///c:/Users/gunasekhar.p/Music/venus_Tech_forge_byte/AWS_DEPLOYMENT_RECOMMENDATION.md): Dedicated AWS Lightsail $5/mo deployment guide with step-by-step instructions, firewall rules, and ready-to-send DevOps handover note.
+- [MBR_MANUAL_UI_FULL_PROJECT_TEST_CASES.xlsx](file:///c:/Users/gunasekhar.p/Music/venus_Tech_forge_byte/MBR_MANUAL_UI_FULL_PROJECT_TEST_CASES.xlsx): **Manual UI / Browser Testing Excel Workbook** with 6 sheets covering real browser steps for Positive, Negative, Boundary, Edge Cases, UI/UX, Dropdown Pre-population, Keyboard Navigation, and Multi-Company Context switching.

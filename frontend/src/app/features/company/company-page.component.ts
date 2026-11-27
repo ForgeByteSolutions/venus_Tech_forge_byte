@@ -278,7 +278,10 @@ export class CompanyPageComponent implements OnInit {
     let filtered = [...this.companies]; 
 
     if (this.selectedGroupId) {
-      filtered = filtered.filter(c => c.agid == this.selectedGroupId);
+      const byGroup = filtered.filter(c => c.agid == this.selectedGroupId);
+      if (byGroup.length > 0) {
+        filtered = byGroup;
+      }
     }
 
     if (this.searchTerm) {
@@ -290,7 +293,6 @@ export class CompanyPageComponent implements OnInit {
       );
     }
 
-    
     if (this.selectedCompanyId) {
       filtered.sort((a, b) => {
         if (a.cid == this.selectedCompanyId) return -1;
@@ -656,6 +658,10 @@ export class CompanyPageComponent implements OnInit {
   private extraFirstRow(data: any): any | null {
     if (!data) return null;
     if (Array.isArray(data)) {
+      if (this.selectedCompanyId) {
+        const match = data.find((d: any) => (d.cid || d.CID || d.id || d.companyId) == this.selectedCompanyId);
+        if (match) return match;
+      }
       const table = data.find((t: any) => t && Array.isArray(t.rows) && t.rows.length > 0);
       return table ? table.rows[0] : (data[0] || null);
     }
@@ -942,12 +948,18 @@ export class CompanyPageComponent implements OnInit {
   }
 
   selectCompany(c: any) {
+    if (!c) return;
     console.log('Selecting company:', c);
     this.selectedCompanyId = c.cid;
     
-    this.company = c;
+    this.company = { ...c };
     this.companyContextService.setCompany(c); 
-    this.selectedGroupId = c.agid ?? this.selectedGroupId;
+    if (c.agid && this.accountGroups.some(g => g.agid == c.agid)) {
+      const hasGroupComps = this.companies.some(comp => comp.agid == c.agid);
+      if (hasGroupComps) {
+        this.selectedGroupId = c.agid;
+      }
+    }
     this.loadCompanyData();
   }
 

@@ -271,10 +271,10 @@ export class CompatibilityController {
 
     if (action === 'getdropdownlist' || action === 'getdropdownlistwhere') {
       return this.getDropdownList(
-        this.stringValue(query.table || ''),
-        this.stringValue(query.value || ''),
-        this.stringValue(query.text || ''),
-        this.stringValue(query.where || ''),
+        this.stringValue(params.p1 || query.table || ''),
+        this.stringValue(params.p2 || query.value || ''),
+        this.stringValue(params.p3 || query.text || ''),
+        this.stringValue(params.p4 || query.where || ''),
         query,
       );
     }
@@ -756,13 +756,17 @@ export class CompatibilityController {
 
   private async handleCompanyGet(action: string, params: AnyRecord) {
     if (action === 'getcompanylistbyaid' || action === 'admingetcompaniesbyaid' || action === 'getcompaniesbyaccount') {
-      return this.listCompanies({ aid: this.numberValue(params.p1), activeOnly: action === 'getcompanylistbyaid' });
+      return this.listCompanies({ aid: this.numberValue(params.p1), activeOnly: false });
     }
-    if (action === 'getcompanylistbycid') return this.listCompanies({ cid: this.numberValue(params.p1), activeOnly: true });
+    if (action === 'getcompanylistbycid') return this.listCompanies({ cid: this.numberValue(params.p1), activeOnly: false });
     if (action === 'getcompanylistbyuidagid') return this.listCompaniesByUser(this.numberValue(params.p1), this.numberValue(params.p2));
-    if (action === 'getcompanydetails') return this.getCompanyDetails(this.numberValue(params.p1));
+    if (action === 'getcompanydetails' || action === 'getcompanybyid' || action === 'getcompanybycid') {
+      const cid = this.numberValue(params.p1);
+      const details = await this.getCompanyDetails(cid);
+      return details ? [details] : [];
+    }
     if (action === 'getfilingflagsbycid') return this.getCompanyFilingFlags(this.numberValue(params.p1));
-    return this.listCompanies({ activeOnly: true });
+    return this.listCompanies({ activeOnly: false });
   }
 
   private async handleCompanyPost(action: string, body: AnyRecord, params: AnyRecord, query: AnyRecord) {
@@ -1755,9 +1759,7 @@ export class CompatibilityController {
   cid?: number;
   activeOnly?: boolean;
 }) {
-  // console.log('LIST COMPANIES FILTER:', filter);
-
-  const companies = await this.prisma.company.findMany({
+  let companies = await this.prisma.company.findMany({
     where: {
       ...(filter.aid ? { aid: filter.aid } : {}),
       ...(filter.cid ? { cid: filter.cid } : {}),
@@ -1766,56 +1768,26 @@ export class CompatibilityController {
     orderBy: { cid: 'asc' },
   });
 
-  // console.log('TOTAL COMPANIES:', companies.length);
+  if (companies.length === 0) {
+    companies = await this.prisma.company.findMany({
+      where: {
+        ...(filter.aid ? { aid: filter.aid } : {}),
+        ...(filter.cid ? { cid: filter.cid } : {}),
+      },
+      orderBy: { cid: 'asc' },
+    });
+  }
 
   const users = await this.prisma.user.findMany();
 
-  // console.log('TOTAL USERS:', users.length);
-
   return companies.map((company) => {
-    // console.log(
-    //   // '----------------------------'
-    // );
-    // console.log(
-    //   'COMPANY:',
-    //   company.cid,
-    //   company.companyName 
-    // );
-
     const userCount = users.filter((user) => {
-      // console.log(
-      //   'USER:',
-      //   user.uid,
-      //   'companyIds:',
-      //   user.companyIds
-      // );
-
       const companyIds = (user.companyIds || '')
         .split(',')
         .map((id: string) => id.trim());
 
-      const matched = companyIds.includes(
-        String(company.cid)
-      );
-
-      if (matched) {
-        // console.log(
-        //   'MATCH FOUND => User:',
-        //   user.uid,
-        //   'Company:',
-        //   company.cid
-        // );
-      }
-
-      return matched;
+      return companyIds.includes(String(company.cid));
     }).length;
-
-    // console.log(
-    //   'CID:',
-    //   company.cid,
-    //   'UserCount:',
-    //   userCount
-    // );
 
     return {
       ...this.toLegacyCompany(company),
@@ -1826,7 +1798,7 @@ export class CompatibilityController {
          
   private async listCompaniesByUser(uid: number, agid: number) {
     const user = uid ? await this.prisma.user.findUnique({ where: { uid } }) : null;
-    const companies = await this.prisma.company.findMany({
+    let companies = await this.prisma.company.findMany({
       where: {
         ...(user?.aid ? { aid: user.aid } : {}),
         ...(agid ? { agid } : {}),
@@ -1834,6 +1806,32 @@ export class CompatibilityController {
       },
       orderBy: { cid: 'asc' },
     });
+
+    if (companies.length === 0 && agid) {
+      companies = await this.prisma.company.findMany({
+        where: {
+          ...(user?.aid ? { aid: user.aid } : {}),
+          isActive: true,
+        },
+        orderBy: { cid: 'asc' },
+      });
+    }
+
+    if (companies.length === 0) {
+      companies = await this.prisma.company.findMany({
+        where: {
+          ...(user?.aid ? { aid: user.aid } : {}),
+        },
+        orderBy: { cid: 'asc' },
+      });
+    }
+
+    if (companies.length === 0) {
+      companies = await this.prisma.company.findMany({
+        orderBy: { cid: 'asc' },
+      });
+    }
+
     return companies.map((company) => this.toLegacyCompany(company));
   }
 
@@ -3437,13 +3435,37 @@ export class CompatibilityController {
     const records = lookups.length
       ? lookups
       : [
+          { value: 'CAISO', text: 'California Independent System Operator', id: 'CAISO' },
+          { value: 'CISO', text: 'California Independent System Operator (CISO)', id: 'CISO' },
           { value: 'PJM', text: 'PJM Interconnection', id: 'PJM' },
-          { value: 'MISO', text: 'Midcontinent ISO', id: 'MISO' },
-          { value: 'CAISO', text: 'California ISO', id: 'CAISO' },
+          { value: 'MISO', text: 'Midcontinent Independent System Operator', id: 'MISO' },
           { value: 'ERCOT', text: 'Electric Reliability Council of Texas', id: 'ERCOT' },
           { value: 'SPP', text: 'Southwest Power Pool', id: 'SPP' },
-          { value: 'NYISO', text: 'New York ISO', id: 'NYISO' },
+          { value: 'NYISO', text: 'New York Independent System Operator', id: 'NYISO' },
           { value: 'ISONE', text: 'ISO New England', id: 'ISONE' },
+          { value: 'NEVP', text: 'Nevada Power Company', id: 'NEVP' },
+          { value: 'AZPS', text: 'Arizona Public Service Company', id: 'AZPS' },
+          { value: 'PACE', text: 'PacifiCorp East', id: 'PACE' },
+          { value: 'PACW', text: 'PacifiCorp West', id: 'PACW' },
+          { value: 'BANC', text: 'Balancing Authority of Northern California', id: 'BANC' },
+          { value: 'LDWP', text: 'Los Angeles Department of Water and Power', id: 'LDWP' },
+          { value: 'TIDC', text: 'Turlock Irrigation District', id: 'TIDC' },
+          { value: 'IID', text: 'Imperial Irrigation District', id: 'IID' },
+          { value: 'WALC', text: 'Western Area Power Administration - DSW', id: 'WALC' },
+          { value: 'WAUW', text: 'Western Area Power Administration - UGP West', id: 'WAUW' },
+          { value: 'WACM', text: 'Western Area Power Administration - RMR', id: 'WACM' },
+          { value: 'PNM', text: 'Public Service Company of New Mexico', id: 'PNM' },
+          { value: 'SRP', text: 'Salt River Project', id: 'SRP' },
+          { value: 'TEPC', text: 'Tucson Electric Power Company', id: 'TEPC' },
+          { value: 'PSCO', text: 'Public Service Company of Colorado', id: 'PSCO' },
+          { value: 'SOCO', text: 'Southern Company Services', id: 'SOCO' },
+          { value: 'TVA', text: 'Tennessee Valley Authority', id: 'TVA' },
+          { value: 'FPL', text: 'Florida Power & Light Company', id: 'FPL' },
+          { value: 'CPLE', text: 'Duke Energy Progress East', id: 'CPLE' },
+          { value: 'CPLW', text: 'Duke Energy Progress West', id: 'CPLW' },
+          { value: 'DUK', text: 'Duke Energy Carolinas', id: 'DUK' },
+          { value: 'SC', text: 'South Carolina Public Service Authority (Santee Cooper)', id: 'SC' },
+          { value: 'SCEG', text: 'Dominion Energy South Carolina', id: 'SCEG' }
         ];
 
     return records.map((record: AnyRecord) => {
